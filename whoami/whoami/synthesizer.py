@@ -40,6 +40,34 @@ _SYSTEM_PROMPT = """\
 - Interaction Guidelines 是最重要的 Section，必须从数据中推断沟通偏好
 - 根据信息量决定长度，最多 30 行
 - Markdown 格式，emoji 做 Section 标题前缀
+
+## 示例输出（仅供参考格式，内容请根据实际数据生成）
+
+```
+# User Profile: Alex
+
+## 👤 Identity
+- **Name:** Alex (alex-dev)
+- **Role:** Backend Engineer
+- **Location:** Tokyo, Japan (UTC+9)
+- **Vibe:** "Ship fast, fix later" — 务实主义，偏好快速迭代
+
+## 🛠 Tech Stack
+- **Languages:** Go (主力), Python, TypeScript
+- **Focus:** 分布式系统、API 设计
+- **Projects:** microkit (45⭐) — Go 微服务脚手架
+
+## 🎮 Gaming
+- **Monster Hunter: World** — 1200+ 小时，重度猎人
+- **Factorio** — 自动化狂热者
+
+## 💬 Interaction Guidelines
+1. Code first — 讨论技术时直接给代码，少说废话
+2. 用日语或英语交流均可，技术术语偏好英文
+3. 可以聊怪猎和工厂游戏，当作同好对待
+4. 不喜欢过度设计，建议方案时优先简单直接的
+5. 学术话题不感兴趣，保持工程导向
+```
 """
 
 
@@ -55,7 +83,13 @@ def _build_user_prompt(data_list: list[ScrapedData]) -> str:
         for item in data.items:
             section += f"- [{item.category}] {item.key}: {item.value}\n"
         parts.append(section)
-    return "用户的公开信息：\n---\n" + "\n".join(parts) + "\n---\n\n请生成 USER.md："
+    return (
+        "以下是从用户公开主页抓取的原始数据：\n---\n"
+        + "\n".join(parts)
+        + "\n---\n\n"
+        "请严格按照 system prompt 的结构和规则生成 USER.md。"
+        "记住：这是给 Agent 的操作手册，不是分析报告。"
+    )
 
 
 async def synthesize(
