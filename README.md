@@ -6,6 +6,29 @@ WhoWeAre 是一套给 OpenClaw/AI Agent 用的画像生成工具：
 - `whoareu`：根据你的描述生成人格文件 `AGENTS.md` + `SOUL.md` + `IDENTITY.md`
 - `openclaw-whoweare-plugin`：把上面两个能力挂到 OpenClaw 命令里直接调用
 
+## One-Click Deploy (OpenClaw server)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ReinerBRO/WhoWeAre/main/scripts/deploy-openclaw.sh | bash
+```
+
+可选环境变量（部署前设置）：
+
+- `WHOWEARE_DIR`：安装目录（默认 `$HOME/WhoWeAre`）
+- `WHOWEARE_DEFAULT_PROVIDER`：默认 provider
+- `WHOWEARE_DEFAULT_MODEL`：默认 model
+- `WHOWEARE_DEFAULT_API_BASE`：默认 API Base
+- `WHOWEARE_DEFAULT_API_KEY`：默认 API Key
+- `WHOWEARE_NO_RESTART=1`：安装后不自动重启 gateway
+
+示例：
+
+```bash
+WHOWEARE_DEFAULT_PROVIDER=openai \
+WHOWEARE_DEFAULT_MODEL=gpt-4o \
+curl -fsSL https://raw.githubusercontent.com/ReinerBRO/WhoWeAre/main/scripts/deploy-openclaw.sh | bash
+```
+
 ## Repository Layout
 
 - `llmkit/`：共享 LLM 配置层

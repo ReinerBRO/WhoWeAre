@@ -145,19 +145,35 @@ function resolveWorkspaceDir(api: OpenClawPluginApi, cfg: PluginConfig): string 
   return process.cwd();
 }
 
-function resolveProjectDir(
+function resolveProjectCandidates(
   api: OpenClawPluginApi,
   cfg: PluginConfig,
   workspaceDir: string,
   target: "whoami" | "whoareu",
-): string {
+): string[] {
   const configured = trimMaybe(
     target === "whoami" ? cfg.whoamiProjectDir : cfg.whoareuProjectDir,
   );
   if (configured) {
-    return api.resolvePath(configured);
+    return [api.resolvePath(configured)];
   }
-  return path.join(workspaceDir, "whoweare", target);
+  return [path.join(workspaceDir, target), path.join(workspaceDir, "whoweare", target)];
+}
+
+async function resolveProjectDir(
+  api: OpenClawPluginApi,
+  cfg: PluginConfig,
+  workspaceDir: string,
+  target: "whoami" | "whoareu",
+): Promise<string> {
+  const candidates = resolveProjectCandidates(api, cfg, workspaceDir, target);
+  for (const candidate of candidates) {
+    const pyproject = path.join(candidate, "pyproject.toml");
+    if (await pathExists(pyproject)) {
+      return candidate;
+    }
+  }
+  return candidates[0];
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -498,7 +514,7 @@ async function handleWhoamiCommand(
   }
 
   const workspaceDir = resolveWorkspaceDir(api, cfg);
-  const projectDir = resolveProjectDir(api, cfg, workspaceDir, "whoami");
+  const projectDir = await resolveProjectDir(api, cfg, workspaceDir, "whoami");
   const projectError = await ensureProject(projectDir, "whoami");
   if (projectError) {
     return { text: `${projectError}\nConfigure plugins.entries.openclaw-whoweare.config.whoamiProjectDir if needed.` };
@@ -555,7 +571,7 @@ async function handleWhoareuCommand(
   const { first, rest } = splitFirstArg(input);
   const action = first.toLowerCase();
   const workspaceDir = resolveWorkspaceDir(api, cfg);
-  const projectDir = resolveProjectDir(api, cfg, workspaceDir, "whoareu");
+  const projectDir = await resolveProjectDir(api, cfg, workspaceDir, "whoareu");
   const projectError = await ensureProject(projectDir, "whoareu");
   if (projectError) {
     return { text: `${projectError}\nConfigure plugins.entries.openclaw-whoweare.config.whoareuProjectDir if needed.` };

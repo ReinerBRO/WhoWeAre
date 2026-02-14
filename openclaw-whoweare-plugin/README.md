@@ -29,8 +29,8 @@ Then restart the gateway.
 
 By default, plugin assumes:
 
-- `./whoweare/whoami`
-- `./whoweare/whoareu`
+- `./whoami` and `./whoareu` (standalone WhoWeAre repo)
+- or `./whoweare/whoami` and `./whoweare/whoareu` (vendored inside another repo)
 
 You can override these in plugin config:
 
@@ -44,7 +44,7 @@ Each project must be runnable in its own directory.
 Example:
 
 ```bash
-cd whoweare/whoami && python3 -m pip install -e .
+cd whoami && python3 -m pip install -e .
 cd ../whoareu && python3 -m pip install -e .
 ```
 
