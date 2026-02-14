@@ -1,19 +1,19 @@
 # WhoWeAre
 
-你的 AI Agent 认识你吗？
+你的 OpenClaw/AIA 认识你吗？
 
 大多数 AI 助手在第一次对话时，对你一无所知——不知道你写什么代码、玩什么游戏、听什么歌。每次都要从头介绍自己，每次都要重新建立默契。
 
 WhoWeAre 解决的就是这个问题。
 
-只需要丢几个链接，它就能从你的公开主页里提取出一份完整的用户画像（`USER.md`），让 Agent 在第一句话之前就已经了解你。同样地，你也可以用一句话描述你想要的 Agent 性格，它会生成对应的身份和灵魂文件，让 Agent 不再是千篇一律的"我是一个 AI 助手"。
+只需要丢几个链接，它就能从你的公开主页里提取出一份完整的用户画像（`USER.md`），让 OpenClaw/AIA 在第一句话之前就已经了解你。同样地，你也可以用一句话描述你想要的 AIA 性格，它会生成对应的身份和灵魂文件，让你的 AIA 不再是千篇一律的"我是一个 AI 助手"。
 
 ## 效果
 
-- `/myprofile` → 从你的 GitHub、B站、知乎等主页抓取信息，合成一份 Agent 可直接消费的 `USER.md`
+- `/myprofile` → 从你的 GitHub、B站、知乎等主页抓取信息，合成一份 AIA 可直接消费的 `USER.md`
 - `/whoareu` → 用一句话或一个模板，生成 `IDENTITY.md`（身份）+ `SOUL.md`（性格）
 
-生成的文件会自动写入 OpenClaw workspace，Agent 下次启动时就能读取。
+生成的文件会自动写入 OpenClaw workspace，AIA 下次启动时就能读取。
 
 ## 安装
 
@@ -37,7 +37,7 @@ cd ../whoareu && pip install -e .
 
 在 OpenClaw TUI 或任何接入了 OpenClaw 的聊天平台（Telegram、QQ、WhatsApp 等）中直接发送命令。
 
-### /myprofile — 告诉 Agent 你是谁
+### /myprofile — 告诉 AIA 你是谁
 
 ```text
 /myprofile add https://github.com/<you>
@@ -71,7 +71,7 @@ cd ../whoareu && pip install -e .
 | Dev.to | `dev.to/<user>` |
 | 其他网页 | 任意 URL（通用抓取） |
 
-### /whoareu — 定义 Agent 的人格
+### /whoareu — 定义 AIA 的人格
 
 ```text
 /whoareu 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私
