@@ -12,8 +12,14 @@ Use `/myprofile` and `/whoareu` directly from OpenClaw commands.
 
 The plugin does not duplicate your Python logic. It invokes:
 
-- `python -m whoami.cli`
+- `python -m whoami.cli --no-llm` (scrape stage)
+- `openclaw agent --json` (default synthesis stage)
 - `python -m whoareu.cli`
+
+`myprofile` supports dual-mode synthesis:
+
+- `openclaw` (default): use OpenClaw's own agent/model pipeline
+- `whoami` (fallback/legacy): call whoami's direct litellm synthesis
 
 ## Install (local path)
 
@@ -72,7 +78,19 @@ Optional run flags:
 ```text
 /myprofile run --provider openai --model gpt-4o --keep-queue
 /myprofile run --no-llm
+/myprofile run --mode openclaw --agent main
+/myprofile run --mode whoami
 ```
+
+Note: `--provider/--model/--api-*` flags apply to `whoami` mode (or fallback path).
+
+Config keys related to synthesis mode:
+
+- `plugins.entries.openclaw-whoweare.config.whoamiSynthesisMode` (`openclaw` | `whoami`)
+- `plugins.entries.openclaw-whoweare.config.openclawBin`
+- `plugins.entries.openclaw-whoweare.config.openclawAgentId`
+- `plugins.entries.openclaw-whoweare.config.openclawTimeoutMs`
+- `plugins.entries.openclaw-whoweare.config.openclawFallbackToWhoami` (default: `true`)
 
 Alias: `/whoami-gen ...`
 

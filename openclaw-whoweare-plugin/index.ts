@@ -7,6 +7,12 @@ const STATE_VERSION = 1;
 const URL_REGEX = /https?:\/\/[^\s]+/g;
 const DEFAULT_WHOAMI_TIMEOUT_MS = 10 * 60_000;
 const DEFAULT_WHOAREU_TIMEOUT_MS = 10 * 60_000;
+const DEFAULT_OPENCLAW_TIMEOUT_MS = 10 * 60_000;
+const DEFAULT_OPENCLAW_AGENT_ID = "main";
+const DEFAULT_OPENCLAW_BIN = "openclaw";
+const MAX_SCRAPE_TEXT_CHARS = 60_000;
+
+type WhoamiSynthesisMode = "openclaw" | "whoami";
 
 type PluginConfig = {
   pythonBin?: string;
@@ -19,6 +25,11 @@ type PluginConfig = {
   defaultApiKey?: string;
   whoamiTimeoutMs?: number;
   whoareuTimeoutMs?: number;
+  whoamiSynthesisMode?: string;
+  openclawBin?: string;
+  openclawAgentId?: string;
+  openclawTimeoutMs?: number;
+  openclawFallbackToWhoami?: boolean | string;
 };
 
 type QueueState = {
@@ -33,9 +44,24 @@ type WhoamiRunOptions = {
   apiBase?: string;
   apiKey?: string;
   output?: string;
+  mode?: WhoamiSynthesisMode;
+  agent?: string;
   noLlm: boolean;
   keepQueue: boolean;
   unknownTokens: string[];
+};
+
+type CommandRunResult = {
+  ok: boolean;
+  code: number | null;
+  stdout: string;
+  stderr: string;
+  runtimeError?: string;
+};
+
+type WhoamiExecutionResult = {
+  ok: boolean;
+  text: string;
 };
 
 function emptyState(): QueueState {
@@ -60,12 +86,36 @@ function asPositiveInt(value: unknown, fallback: number): number {
   return rounded > 0 ? rounded : fallback;
 }
 
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["0", "false", "no", "off"].includes(normalized)) {
+      return false;
+    }
+  }
+  return fallback;
+}
+
 function trimMaybe(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeSynthesisMode(value: unknown): WhoamiSynthesisMode | undefined {
+  const raw = trimMaybe(value)?.toLowerCase();
+  if (raw === "openclaw" || raw === "whoami") {
+    return raw;
+  }
+  return undefined;
 }
 
 function splitFirstArg(input: string): { first: string; rest: string } {
@@ -258,7 +308,7 @@ function parseWhoamiRunOptions(input: string): WhoamiRunOptions {
   let noLlm = false;
   let keepQueue = false;
 
-  const valueFlags = new Set(["provider", "model", "api-base", "api-key", "output"]);
+  const valueFlags = new Set(["provider", "model", "api-base", "api-key", "output", "mode", "agent"]);
   const boolFlags = new Set(["no-llm", "keep-queue"]);
 
   for (let i = 0; i < tokens.length; i += 1) {
@@ -309,6 +359,11 @@ function parseWhoamiRunOptions(input: string): WhoamiRunOptions {
     }
   }
 
+  const mode = normalizeSynthesisMode(values["mode"]);
+  if (values["mode"] && !mode) {
+    unknownTokens.push(`--mode=${values["mode"]}`);
+  }
+
   return {
     explicitUrls,
     provider: values["provider"],
@@ -316,6 +371,8 @@ function parseWhoamiRunOptions(input: string): WhoamiRunOptions {
     apiBase: values["api-base"],
     apiKey: values["api-key"],
     output: values["output"],
+    mode,
+    agent: values["agent"],
     noLlm,
     keepQueue,
     unknownTokens,
@@ -330,9 +387,11 @@ function formatWhoamiHelp(): string {
     "/myprofile addmany <url1> <url2> ...",
     "/myprofile list",
     "/myprofile clear",
-    "/myprofile run [--provider x --model y --no-llm --keep-queue]",
+    "/myprofile run [--mode openclaw|whoami --agent main --provider x --model y --no-llm --keep-queue]",
     "/myprofile run <url1> <url2> ...",
     "",
+    "Default mode: openclaw (use OpenClaw agent synthesis).",
+    "Fallback mode: whoami (direct litellm API call).",
     "Alias: /whoami-gen ...",
     "Tip: 先 add 多个链接，再 run 一次生成 USER.md。",
   ].join("\n");
@@ -360,6 +419,152 @@ function tail(text: string, maxLines: number = 12, maxChars: number = 1200): str
     return tailLines;
   }
   return tailLines.slice(tailLines.length - maxChars);
+}
+
+function stripAnsi(text: string): string {
+  return text.replace(/\u001B\[[0-?]*[ -/]*[@-~]/g, "");
+}
+
+function clipText(text: string, maxChars: number): string {
+  if (text.length <= maxChars) {
+    return text;
+  }
+  return `${text.slice(0, maxChars)}\n\n...(truncated)...`;
+}
+
+function resolveWhoamiSynthesisMode(run: WhoamiRunOptions, cfg: PluginConfig): WhoamiSynthesisMode {
+  return run.mode ?? normalizeSynthesisMode(cfg.whoamiSynthesisMode) ?? "openclaw";
+}
+
+function resolveOpenClawBin(cfg: PluginConfig): string {
+  return trimMaybe(cfg.openclawBin) ?? DEFAULT_OPENCLAW_BIN;
+}
+
+function resolveOpenClawAgentId(run: WhoamiRunOptions, cfg: PluginConfig): string {
+  return trimMaybe(run.agent) ?? trimMaybe(cfg.openclawAgentId) ?? DEFAULT_OPENCLAW_AGENT_ID;
+}
+
+function shouldFallbackToWhoami(cfg: PluginConfig): boolean {
+  return asBoolean(cfg.openclawFallbackToWhoami, true);
+}
+
+function buildOpenClawSynthesisPrompt(params: { links: string[]; scrapeOutput: string }): string {
+  const links = params.links.map((link, index) => `${index + 1}. ${link}`).join("\n");
+  const scraped = clipText(params.scrapeOutput.trim(), MAX_SCRAPE_TEXT_CHARS);
+  return [
+    "You are generating a USER.md profile document from scraped public profile data.",
+    "Return markdown only. Do not add code fences or extra commentary.",
+    "Requirements:",
+    "- Keep every claim grounded in the scraped data.",
+    "- If a fact is uncertain, label it as 待确认.",
+    "- Use concise Chinese by default.",
+    "- Include these sections: 概览, 关键信号, 平台观察, 可能兴趣, 后续建议.",
+    "",
+    "Source links:",
+    links,
+    "",
+    "Scraped data:",
+    scraped,
+  ].join("\n");
+}
+
+function parseJsonObject(raw: string): unknown | null {
+  const cleaned = stripAnsi(raw).trim();
+  if (!cleaned) {
+    return null;
+  }
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // continue
+  }
+
+  const first = cleaned.indexOf("{");
+  const last = cleaned.lastIndexOf("}");
+  if (first < 0 || last <= first) {
+    return null;
+  }
+  try {
+    return JSON.parse(cleaned.slice(first, last + 1));
+  } catch {
+    return null;
+  }
+}
+
+function extractAgentText(raw: string): string | null {
+  const parsed = parseJsonObject(raw);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return null;
+  }
+  const result = (parsed as { result?: unknown }).result;
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return null;
+  }
+  const payloads = (result as { payloads?: unknown }).payloads;
+  if (!Array.isArray(payloads)) {
+    return null;
+  }
+  const texts = payloads
+    .map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return "";
+      }
+      const text = (entry as { text?: unknown }).text;
+      return typeof text === "string" ? text.trim() : "";
+    })
+    .filter(Boolean);
+  if (texts.length === 0) {
+    return null;
+  }
+  return texts.join("\n\n");
+}
+
+async function runCommand(params: {
+  api: OpenClawPluginApi;
+  argv: string[];
+  cwd: string;
+  timeoutMs: number;
+}): Promise<CommandRunResult> {
+  const { api, argv, cwd, timeoutMs } = params;
+  try {
+    const result = await api.runtime.system.runCommandWithTimeout(argv, {
+      timeoutMs,
+      cwd,
+    });
+    return {
+      ok: result.code === 0,
+      code: result.code ?? null,
+      stdout: result.stdout ?? "",
+      stderr: result.stderr ?? "",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      ok: false,
+      code: null,
+      stdout: "",
+      stderr: "",
+      runtimeError: message,
+    };
+  }
+}
+
+function formatCommandFailure(title: string, result: CommandRunResult): string {
+  if (result.runtimeError) {
+    return `❌ ${title} failed before execution: ${result.runtimeError}`;
+  }
+  const stderrTail = tail(result.stderr);
+  const stdoutTail = tail(result.stdout);
+  const details = [stderrTail, stdoutTail].filter(Boolean).join("\n");
+  return `❌ ${title} failed (exit code ${String(result.code ?? "unknown")}).\n${details || "No output captured."}`;
+}
+
+function formatCommandSuccess(successMessage: string, stdout: string): string {
+  const stdoutTail = tail(stdout);
+  if (!stdoutTail) {
+    return successMessage;
+  }
+  return `${successMessage}\n\nLast log lines:\n${stdoutTail}`;
 }
 
 function pushLlmFlags(argv: string[], defaults: PluginConfig, overrides?: Partial<PluginConfig>) {
@@ -391,29 +596,11 @@ async function executeCli(params: {
   successMessage: string;
 }): Promise<ReplyPayload> {
   const { api, argv, cwd, timeoutMs, title, successMessage } = params;
-  try {
-    const result = await api.runtime.system.runCommandWithTimeout(argv, {
-      timeoutMs,
-      cwd,
-    });
-    if (result.code === 0) {
-      const stdoutTail = tail(result.stdout);
-      if (!stdoutTail) {
-        return { text: successMessage };
-      }
-      return { text: `${successMessage}\n\nLast log lines:\n${stdoutTail}` };
-    }
-
-    const stderrTail = tail(result.stderr);
-    const stdoutTail = tail(result.stdout);
-    const details = [stderrTail, stdoutTail].filter(Boolean).join("\n");
-    return {
-      text: `❌ ${title} failed (exit code ${String(result.code ?? "unknown")}).\n${details || "No output captured."}`,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { text: `❌ ${title} failed before execution: ${message}` };
+  const result = await runCommand({ api, argv, cwd, timeoutMs });
+  if (!result.ok) {
+    return { text: formatCommandFailure(title, result) };
   }
+  return { text: formatCommandSuccess(successMessage, result.stdout) };
 }
 
 async function ensureProject(projectDir: string, label: string): Promise<string | null> {
@@ -436,6 +623,142 @@ function resolveOutputPath(workspaceDir: string, requested: string | undefined, 
     return raw;
   }
   return path.join(workspaceDir, raw);
+}
+
+async function runWhoamiLegacy(params: {
+  api: OpenClawPluginApi;
+  cfg: PluginConfig;
+  run: WhoamiRunOptions;
+  pythonBin: string;
+  projectDir: string;
+  links: string[];
+  outputPath: string;
+  timeoutMs: number;
+}): Promise<WhoamiExecutionResult> {
+  const { api, cfg, run, pythonBin, projectDir, links, outputPath, timeoutMs } = params;
+  const argv = [pythonBin, "-m", "whoami.cli"];
+  for (const link of links) {
+    argv.push("--link", link);
+  }
+  if (!run.noLlm) {
+    argv.push("--output", outputPath);
+  } else {
+    argv.push("--no-llm");
+  }
+  pushLlmFlags(argv, cfg, {
+    defaultProvider: run.provider,
+    defaultModel: run.model,
+    defaultApiBase: run.apiBase,
+    defaultApiKey: run.apiKey,
+  });
+
+  const result = await runCommand({
+    api,
+    argv,
+    cwd: projectDir,
+    timeoutMs,
+  });
+  if (!result.ok) {
+    return { ok: false, text: formatCommandFailure("whoami", result) };
+  }
+  const successMessage = run.noLlm
+    ? `✅ Scraping completed (--no-llm).\nLinks: ${links.length}`
+    : `✅ USER.md generated at ${outputPath}\nLinks: ${links.length}`;
+  return { ok: true, text: formatCommandSuccess(successMessage, result.stdout) };
+}
+
+async function runWhoamiViaOpenClaw(params: {
+  api: OpenClawPluginApi;
+  cfg: PluginConfig;
+  run: WhoamiRunOptions;
+  pythonBin: string;
+  projectDir: string;
+  links: string[];
+  outputPath: string;
+  workspaceDir: string;
+  whoamiTimeoutMs: number;
+}): Promise<WhoamiExecutionResult> {
+  const { api, cfg, run, pythonBin, projectDir, links, outputPath, workspaceDir, whoamiTimeoutMs } =
+    params;
+  const scrapeArgv = [pythonBin, "-m", "whoami.cli"];
+  for (const link of links) {
+    scrapeArgv.push("--link", link);
+  }
+  scrapeArgv.push("--no-llm");
+
+  const scrapeRun = await runCommand({
+    api,
+    argv: scrapeArgv,
+    cwd: projectDir,
+    timeoutMs: whoamiTimeoutMs,
+  });
+  if (!scrapeRun.ok) {
+    return { ok: false, text: formatCommandFailure("whoami scrape", scrapeRun) };
+  }
+
+  const scrapeOutput = stripAnsi(scrapeRun.stdout).trim();
+  if (!scrapeOutput) {
+    return {
+      ok: false,
+      text: "❌ whoami scrape produced no output, cannot synthesize USER.md with OpenClaw.",
+    };
+  }
+
+  const openclawBin = resolveOpenClawBin(cfg);
+  const agentId = resolveOpenClawAgentId(run, cfg);
+  const openclawTimeoutMs = asPositiveInt(cfg.openclawTimeoutMs, DEFAULT_OPENCLAW_TIMEOUT_MS);
+  const timeoutSeconds = Math.max(1, Math.ceil(openclawTimeoutMs / 1000));
+  const synthesisPrompt = buildOpenClawSynthesisPrompt({
+    links,
+    scrapeOutput,
+  });
+  const agentArgv = [
+    openclawBin,
+    "agent",
+    "--agent",
+    agentId,
+    "--message",
+    synthesisPrompt,
+    "--thinking",
+    "low",
+    "--json",
+    "--timeout",
+    String(timeoutSeconds),
+  ];
+
+  const agentRun = await runCommand({
+    api,
+    argv: agentArgv,
+    cwd: workspaceDir,
+    timeoutMs: openclawTimeoutMs,
+  });
+  if (!agentRun.ok) {
+    return { ok: false, text: formatCommandFailure("openclaw agent synthesis", agentRun) };
+  }
+
+  const synthesized = extractAgentText(agentRun.stdout)?.trim();
+  if (!synthesized) {
+    return {
+      ok: false,
+      text:
+        "❌ OpenClaw agent returned no text payload for synthesis.\n" +
+        `Agent output tail:\n${tail(agentRun.stdout, 20, 2000) || "No output captured."}`,
+    };
+  }
+
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  await fs.writeFile(outputPath, synthesized, "utf8");
+
+  const scrapeTail = tail(scrapeRun.stdout, 8, 800);
+  const lines = [
+    `✅ USER.md generated at ${outputPath}`,
+    `Links: ${links.length}`,
+    `Synthesis: OpenClaw agent (${agentId})`,
+  ];
+  if (scrapeTail) {
+    lines.push("", "Scrape tail:", scrapeTail);
+  }
+  return { ok: true, text: lines.join("\n") };
 }
 
 async function handleWhoamiCommand(
@@ -523,40 +846,72 @@ async function handleWhoamiCommand(
 
   const pythonBin = await resolvePythonBin(api, cfg, projectDir);
   const outputPath = resolveOutputPath(workspaceDir, run.output, "USER.md");
-  const argv = [pythonBin, "-m", "whoami.cli"];
-  for (const link of links) {
-    argv.push("--link", link);
-  }
-  argv.push("--output", outputPath);
-  if (run.noLlm) {
-    argv.push("--no-llm");
-  }
-  pushLlmFlags(argv, cfg, {
-    defaultProvider: run.provider,
-    defaultModel: run.model,
-    defaultApiBase: run.apiBase,
-    defaultApiKey: run.apiKey,
-  });
-
   const timeoutMs = asPositiveInt(cfg.whoamiTimeoutMs, DEFAULT_WHOAMI_TIMEOUT_MS);
-  const result = await executeCli({
-    api,
-    argv,
-    cwd: projectDir,
-    timeoutMs,
-    title: "whoami",
-    successMessage: `✅ USER.md generated at ${outputPath}\nLinks: ${links.length}`,
-  });
+  const mode = resolveWhoamiSynthesisMode(run, cfg);
+  let runResult: WhoamiExecutionResult;
+  if (mode === "openclaw" && !run.noLlm) {
+    runResult = await runWhoamiViaOpenClaw({
+      api,
+      cfg,
+      run,
+      pythonBin,
+      projectDir,
+      links,
+      outputPath,
+      workspaceDir,
+      whoamiTimeoutMs: timeoutMs,
+    });
+    if (!runResult.ok && shouldFallbackToWhoami(cfg)) {
+      const fallback = await runWhoamiLegacy({
+        api,
+        cfg,
+        run,
+        pythonBin,
+        projectDir,
+        links,
+        outputPath,
+        timeoutMs,
+      });
+      if (fallback.ok) {
+        runResult = {
+          ok: true,
+          text:
+            `${runResult.text}\n\n` +
+            "Fallback: OpenClaw synthesis failed, switched to legacy whoami mode.\n\n" +
+            fallback.text,
+        };
+      } else {
+        runResult = {
+          ok: false,
+          text:
+            `${runResult.text}\n\n` +
+            "Fallback: legacy whoami mode also failed.\n\n" +
+            fallback.text,
+        };
+      }
+    }
+  } else {
+    runResult = await runWhoamiLegacy({
+      api,
+      cfg,
+      run,
+      pythonBin,
+      projectDir,
+      links,
+      outputPath,
+      timeoutMs,
+    });
+  }
 
-  if (usingQueue && !run.keepQueue && result.text?.startsWith("✅")) {
+  if (usingQueue && !run.keepQueue && runResult.ok) {
     delete state.whoamiQueues[queueKey];
     await writeState(statePath, state);
     return {
-      text: `${result.text}\nQueue cleared. Use --keep-queue on /myprofile run if you want to keep it.`,
+      text: `${runResult.text}\nQueue cleared. Use --keep-queue on /myprofile run if you want to keep it.`,
     };
   }
 
-  return result;
+  return { text: runResult.text };
 }
 
 async function handleWhoareuCommand(

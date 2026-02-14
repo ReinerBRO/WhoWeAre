@@ -5,6 +5,9 @@ REPO_URL="${WHOWEARE_REPO_URL:-https://github.com/ReinerBRO/WhoWeAre.git}"
 BRANCH="${WHOWEARE_BRANCH:-main}"
 INSTALL_DIR="${WHOWEARE_DIR:-$HOME/WhoWeAre}"
 OPENCLAW_BIN="${OPENCLAW_BIN:-openclaw}"
+WHOAMI_SYNTHESIS_MODE="${WHOWEARE_WHOAMI_SYNTHESIS_MODE:-openclaw}"
+OPENCLAW_AGENT_ID="${WHOWEARE_OPENCLAW_AGENT_ID:-main}"
+OPENCLAW_FALLBACK_TO_WHOAMI="${WHOWEARE_OPENCLAW_FALLBACK_TO_WHOAMI:-1}"
 PYTHON_BIN="${WHOWEARE_PYTHON_BIN:-python3}"
 VENV_DIR="${WHOWEARE_VENV_DIR:-$INSTALL_DIR/.venv}"
 WORKSPACE_DIR="${WHOWEARE_WORKSPACE_DIR:-$INSTALL_DIR/output}"
@@ -36,6 +39,7 @@ set_config() {
 require_cmd git
 require_cmd "$PYTHON_BIN"
 require_cmd "$OPENCLAW_BIN"
+OPENCLAW_BIN_PATH="$(command -v "$OPENCLAW_BIN")"
 
 log "Preparing source at $INSTALL_DIR"
 if [ -d "$INSTALL_DIR/.git" ]; then
@@ -66,6 +70,14 @@ set_config "plugins.entries.openclaw-whoweare.config.pythonBin" "$VENV_DIR/bin/p
 set_config "plugins.entries.openclaw-whoweare.config.whoamiProjectDir" "$WHOAMI_DIR"
 set_config "plugins.entries.openclaw-whoweare.config.whoareuProjectDir" "$WHOAREU_DIR"
 set_config "plugins.entries.openclaw-whoweare.config.workspaceDir" "$WORKSPACE_DIR"
+set_config "plugins.entries.openclaw-whoweare.config.whoamiSynthesisMode" "$WHOAMI_SYNTHESIS_MODE"
+set_config "plugins.entries.openclaw-whoweare.config.openclawBin" "$OPENCLAW_BIN_PATH"
+set_config "plugins.entries.openclaw-whoweare.config.openclawAgentId" "$OPENCLAW_AGENT_ID"
+if [ "$OPENCLAW_FALLBACK_TO_WHOAMI" = "0" ]; then
+  set_config "plugins.entries.openclaw-whoweare.config.openclawFallbackToWhoami" false
+else
+  set_config "plugins.entries.openclaw-whoweare.config.openclawFallbackToWhoami" true
+fi
 
 if [ -n "${WHOWEARE_DEFAULT_PROVIDER:-}" ]; then
   set_config "plugins.entries.openclaw-whoweare.config.defaultProvider" "$WHOWEARE_DEFAULT_PROVIDER"
@@ -99,4 +111,5 @@ printf '\n'
 printf 'Try these commands in OpenClaw chat:\n'
 printf '  /myprofile add https://github.com/yourname\n'
 printf '  /myprofile run\n'
+printf '  /myprofile run --mode whoami\n'
 printf '  /whoareu prompt 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私\n'

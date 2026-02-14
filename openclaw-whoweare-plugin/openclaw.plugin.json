@@ -40,6 +40,26 @@
     "whoamiTimeoutMs": {
       "label": "whoami Timeout (ms)"
     },
+    "whoamiSynthesisMode": {
+      "label": "whoami Synthesis Mode",
+      "help": "openclaw = use OpenClaw agent synthesis; whoami = direct litellm synthesis."
+    },
+    "openclawBin": {
+      "label": "OpenClaw Binary",
+      "placeholder": "openclaw",
+      "help": "Binary path used for OpenClaw synthesis mode."
+    },
+    "openclawAgentId": {
+      "label": "OpenClaw Agent Id",
+      "help": "Agent id used by `openclaw agent` in synthesis mode."
+    },
+    "openclawTimeoutMs": {
+      "label": "OpenClaw Timeout (ms)"
+    },
+    "openclawFallbackToWhoami": {
+      "label": "Fallback To whoami",
+      "help": "If OpenClaw synthesis fails, auto-fallback to legacy whoami mode."
+    },
     "whoareuTimeoutMs": {
       "label": "whoareu Timeout (ms)"
     }
@@ -75,6 +95,23 @@
       "whoamiTimeoutMs": {
         "type": "number",
         "minimum": 1000
+      },
+      "whoamiSynthesisMode": {
+        "type": "string",
+        "enum": ["openclaw", "whoami"]
+      },
+      "openclawBin": {
+        "type": "string"
+      },
+      "openclawAgentId": {
+        "type": "string"
+      },
+      "openclawTimeoutMs": {
+        "type": "number",
+        "minimum": 1000
+      },
+      "openclawFallbackToWhoami": {
+        "type": "boolean"
       },
       "whoareuTimeoutMs": {
         "type": "number",

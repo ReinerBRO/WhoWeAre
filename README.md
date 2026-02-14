@@ -15,6 +15,9 @@ curl -fsSL https://raw.githubusercontent.com/ReinerBRO/WhoWeAre/main/scripts/dep
 可选环境变量（部署前设置）：
 
 - `WHOWEARE_DIR`：安装目录（默认 `$HOME/WhoWeAre`）
+- `WHOWEARE_WHOAMI_SYNTHESIS_MODE`：`openclaw`（默认）或 `whoami`
+- `WHOWEARE_OPENCLAW_AGENT_ID`：OpenClaw synthesis 使用的 agent（默认 `main`）
+- `WHOWEARE_OPENCLAW_FALLBACK_TO_WHOAMI`：`1` 开启回退（默认）/ `0` 关闭
 - `WHOWEARE_DEFAULT_PROVIDER`：默认 provider
 - `WHOWEARE_DEFAULT_MODEL`：默认 model
 - `WHOWEARE_DEFAULT_API_BASE`：默认 API Base
@@ -107,10 +110,20 @@ If you vendor this repo under another workspace (for example under `openclaw/who
 
 Alias: `/whoami-gen ...`
 
+Default synthesis path: `openclaw` mode (uses OpenClaw agent).  
+Fallback path: `whoami` mode (legacy direct litellm call).
+
 Direct run:
 
 ```text
 /myprofile run https://github.com/<you> https://www.zhihu.com/people/<id>
+```
+
+Switch synthesis mode explicitly:
+
+```text
+/myprofile run --mode openclaw --agent main
+/myprofile run --mode whoami
 ```
 
 `whoareu`:
@@ -130,6 +143,11 @@ Useful fields:
 - `whoamiProjectDir`
 - `whoareuProjectDir`
 - `pythonBin`
+- `whoamiSynthesisMode` (`openclaw` | `whoami`)
+- `openclawBin`
+- `openclawAgentId`
+- `openclawTimeoutMs`
+- `openclawFallbackToWhoami`
 - `defaultProvider`
 - `defaultModel`
 
@@ -143,6 +161,8 @@ Useful fields:
 - `--api-key`
 
 也可以通过环境变量读取默认配置（由 `llmkit` 处理）。
+
+说明：`/myprofile` 在默认 `openclaw` 模式下主要走 OpenClaw agent；`--provider/--model` 参数用于 `whoami` 模式或回退路径。
 
 ## License
 
