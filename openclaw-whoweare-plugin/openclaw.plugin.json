@@ -1,0 +1,85 @@
+{
+  "id": "openclaw-whoweare",
+  "name": "WhoWeAre",
+  "description": "Run whoami/whoareu from OpenClaw commands.",
+  "uiHints": {
+    "pythonBin": {
+      "label": "Python Binary",
+      "placeholder": "/usr/bin/python3",
+      "help": "Optional override. Defaults to project .venv python if present."
+    },
+    "workspaceDir": {
+      "label": "Workspace Dir",
+      "help": "Where generated USER.md / AGENTS.md / SOUL.md / IDENTITY.md are written."
+    },
+    "whoamiProjectDir": {
+      "label": "whoami Project Dir",
+      "help": "Path to the whoami project root (contains pyproject.toml)."
+    },
+    "whoareuProjectDir": {
+      "label": "whoareu Project Dir",
+      "help": "Path to the whoareu project root (contains pyproject.toml)."
+    },
+    "defaultProvider": {
+      "label": "Default LLM Provider",
+      "help": "Passed to whoami/whoareu as --provider."
+    },
+    "defaultModel": {
+      "label": "Default LLM Model",
+      "help": "Passed to whoami/whoareu as --model."
+    },
+    "defaultApiBase": {
+      "label": "Default API Base",
+      "help": "Passed to whoami/whoareu as --api-base."
+    },
+    "defaultApiKey": {
+      "label": "Default API Key",
+      "sensitive": true,
+      "help": "Passed to whoami/whoareu as --api-key."
+    },
+    "whoamiTimeoutMs": {
+      "label": "whoami Timeout (ms)"
+    },
+    "whoareuTimeoutMs": {
+      "label": "whoareu Timeout (ms)"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "pythonBin": {
+        "type": "string"
+      },
+      "workspaceDir": {
+        "type": "string"
+      },
+      "whoamiProjectDir": {
+        "type": "string"
+      },
+      "whoareuProjectDir": {
+        "type": "string"
+      },
+      "defaultProvider": {
+        "type": "string"
+      },
+      "defaultModel": {
+        "type": "string"
+      },
+      "defaultApiBase": {
+        "type": "string"
+      },
+      "defaultApiKey": {
+        "type": "string"
+      },
+      "whoamiTimeoutMs": {
+        "type": "number",
+        "minimum": 1000
+      },
+      "whoareuTimeoutMs": {
+        "type": "number",
+        "minimum": 1000
+      }
+    }
+  }
+}
