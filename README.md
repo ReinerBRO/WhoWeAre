@@ -61,13 +61,15 @@ whoareu --template otaku --name 小夜 --install .
 
 ### 1. Install plugin
 
-From `openclaw` repository root:
+From `WhoWeAre` repository root:
 
 ```bash
-openclaw plugins install -l ./whoweare/openclaw-whoweare-plugin
+openclaw plugins install -l ./openclaw-whoweare-plugin
 ```
 
 Restart gateway after install.
+
+If you vendor this repo under another workspace (for example under `openclaw/whoweare`), use that path instead.
 
 ### 2. Use commands in OpenClaw
 
@@ -120,4 +122,3 @@ Useful fields:
 ## License
 
 MIT (recommended)
-

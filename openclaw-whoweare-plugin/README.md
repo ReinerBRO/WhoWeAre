@@ -17,10 +17,10 @@ The plugin does not duplicate your Python logic. It invokes:
 
 ## Install (local path)
 
-From this repository root:
+From `WhoWeAre` repository root:
 
 ```bash
-openclaw plugins install -l ./whoweare/openclaw-whoweare-plugin
+openclaw plugins install -l ./openclaw-whoweare-plugin
 ```
 
 Then restart the gateway.
