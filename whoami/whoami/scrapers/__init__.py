@@ -18,6 +18,7 @@ _SCRAPER_MODULES = [
     "whoami.scrapers.zhihu",
     "whoami.scrapers.douban",
     "whoami.scrapers.weibo",
+    "whoami.scrapers.scholar",
     "whoami.scrapers.generic",  # catch-all, must be last
 ]
 
