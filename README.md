@@ -21,6 +21,8 @@ cd ../whoareu && pip install -e .
 
 ## 使用
 
+在 OpenClaw TUI 或任何接入了 OpenClaw 的聊天平台（Telegram、QQ、WhatsApp 等）中直接发送命令即可。
+
 ### /myprofile — 生成 USER.md
 
 添加链接后一键生成：
