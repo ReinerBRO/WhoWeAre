@@ -64,6 +64,7 @@ cd ../whoareu && pip install -e .
 | 微博 | `weibo.com/<uid>` |
 | 豆瓣 | `douban.com/people/<id>` |
 | Google Scholar | `scholar.google.com/citations?user=<id>` |
+| 小红书 | `xiaohongshu.com/user/profile/<id>` |
 | Stack Overflow | `stackoverflow.com/users/<id>` |
 | Reddit | `reddit.com/user/<name>` |
 | Steam | `steamcommunity.com/id/<name>` |
