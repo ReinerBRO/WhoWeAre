@@ -20,6 +20,8 @@ The plugin does not duplicate your Python logic. It invokes:
 
 - `openclaw` (default): use OpenClaw's own agent/model pipeline
 - `whoami` (fallback/legacy): call whoami's direct litellm synthesis
+- default output target: `<agents.defaults.workspace>/USER.md`
+- before replace, existing `USER.md` is backed up as `USER.md.bak-<timestamp>`
 
 ## Install (local path)
 

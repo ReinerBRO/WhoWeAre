@@ -112,6 +112,7 @@ Alias: `/whoami-gen ...`
 
 Default synthesis path: `openclaw` mode (uses OpenClaw agent).  
 Fallback path: `whoami` mode (legacy direct litellm call).
+Default USER file target: `<agents.defaults.workspace>/USER.md`, and plugin will backup old file before replacing.
 
 Direct run:
 

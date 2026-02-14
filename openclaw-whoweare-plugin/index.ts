@@ -10,7 +10,7 @@ const DEFAULT_WHOAREU_TIMEOUT_MS = 10 * 60_000;
 const DEFAULT_OPENCLAW_TIMEOUT_MS = 10 * 60_000;
 const DEFAULT_OPENCLAW_AGENT_ID = "main";
 const DEFAULT_OPENCLAW_BIN = "openclaw";
-const MAX_SCRAPE_TEXT_CHARS = 60_000;
+const MAX_SCRAPE_TEXT_CHARS = 20_000;
 
 type WhoamiSynthesisMode = "openclaw" | "whoami";
 
@@ -62,6 +62,7 @@ type CommandRunResult = {
 type WhoamiExecutionResult = {
   ok: boolean;
   text: string;
+  generatedPath?: string;
 };
 
 function emptyState(): QueueState {
@@ -193,6 +194,20 @@ function resolveWorkspaceDir(api: OpenClawPluginApi, cfg: PluginConfig): string 
     return api.resolvePath(defaultsWorkspace);
   }
   return process.cwd();
+}
+
+function resolveUserWorkspaceDir(api: OpenClawPluginApi, cfg: PluginConfig): string {
+  const defaultsWorkspace = trimMaybe(api.config?.agents?.defaults?.workspace);
+  if (defaultsWorkspace) {
+    return api.resolvePath(defaultsWorkspace);
+  }
+
+  const firstAgentWorkspace = trimMaybe(api.config?.agents?.list?.[0]?.workspace);
+  if (firstAgentWorkspace) {
+    return api.resolvePath(firstAgentWorkspace);
+  }
+
+  return resolveWorkspaceDir(api, cfg);
 }
 
 function resolveProjectCandidates(
@@ -392,6 +407,7 @@ function formatWhoamiHelp(): string {
     "",
     "Default mode: openclaw (use OpenClaw agent synthesis).",
     "Fallback mode: whoami (direct litellm API call).",
+    "Default output target: <agents.defaults.workspace>/USER.md (auto backup before replace).",
     "Alias: /whoami-gen ...",
     "Tip: 先 add 多个链接，再 run 一次生成 USER.md。",
   ].join("\n");
@@ -625,6 +641,45 @@ function resolveOutputPath(workspaceDir: string, requested: string | undefined, 
   return path.join(workspaceDir, raw);
 }
 
+function createStagedOutputPath(finalPath: string): string {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${finalPath}.tmp-${stamp}`;
+}
+
+function formatBackupStamp(date: Date = new Date()): string {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
+}
+
+async function installGeneratedFileWithBackup(params: {
+  generatedPath: string;
+  finalPath: string;
+}): Promise<{ finalPath: string; backupPath?: string }> {
+  const { generatedPath, finalPath } = params;
+  if (!(await pathExists(generatedPath))) {
+    throw new Error(`Generated file not found: ${generatedPath}`);
+  }
+
+  await fs.mkdir(path.dirname(finalPath), { recursive: true });
+  let backupPath: string | undefined;
+  if (await pathExists(finalPath)) {
+    backupPath = `${finalPath}.bak-${formatBackupStamp()}`;
+    await fs.copyFile(finalPath, backupPath);
+  }
+
+  if (generatedPath === finalPath) {
+    return { finalPath, backupPath };
+  }
+
+  try {
+    await fs.rename(generatedPath, finalPath);
+  } catch {
+    await fs.copyFile(generatedPath, finalPath);
+    await fs.unlink(generatedPath);
+  }
+
+  return { finalPath, backupPath };
+}
+
 async function runWhoamiLegacy(params: {
   api: OpenClawPluginApi;
   cfg: PluginConfig;
@@ -663,8 +718,12 @@ async function runWhoamiLegacy(params: {
   }
   const successMessage = run.noLlm
     ? `✅ Scraping completed (--no-llm).\nLinks: ${links.length}`
-    : `✅ USER.md generated at ${outputPath}\nLinks: ${links.length}`;
-  return { ok: true, text: formatCommandSuccess(successMessage, result.stdout) };
+    : `✅ USER.md synthesis completed (whoami mode).\nLinks: ${links.length}`;
+  return {
+    ok: true,
+    text: formatCommandSuccess(successMessage, result.stdout),
+    generatedPath: run.noLlm ? undefined : outputPath,
+  };
 }
 
 async function runWhoamiViaOpenClaw(params: {
@@ -751,14 +810,14 @@ async function runWhoamiViaOpenClaw(params: {
 
   const scrapeTail = tail(scrapeRun.stdout, 8, 800);
   const lines = [
-    `✅ USER.md generated at ${outputPath}`,
+    "✅ USER.md synthesis completed (OpenClaw mode).",
     `Links: ${links.length}`,
     `Synthesis: OpenClaw agent (${agentId})`,
   ];
   if (scrapeTail) {
     lines.push("", "Scrape tail:", scrapeTail);
   }
-  return { ok: true, text: lines.join("\n") };
+  return { ok: true, text: lines.join("\n"), generatedPath: outputPath };
 }
 
 async function handleWhoamiCommand(
@@ -838,6 +897,7 @@ async function handleWhoamiCommand(
   }
 
   const workspaceDir = resolveWorkspaceDir(api, cfg);
+  const userWorkspaceDir = resolveUserWorkspaceDir(api, cfg);
   const projectDir = await resolveProjectDir(api, cfg, workspaceDir, "whoami");
   const projectError = await ensureProject(projectDir, "whoami");
   if (projectError) {
@@ -845,7 +905,10 @@ async function handleWhoamiCommand(
   }
 
   const pythonBin = await resolvePythonBin(api, cfg, projectDir);
-  const outputPath = resolveOutputPath(workspaceDir, run.output, "USER.md");
+  const finalOutputPath = run.output
+    ? resolveOutputPath(workspaceDir, run.output, "USER.md")
+    : path.join(userWorkspaceDir, "USER.md");
+  const stagedOutputPath = run.noLlm ? finalOutputPath : createStagedOutputPath(finalOutputPath);
   const timeoutMs = asPositiveInt(cfg.whoamiTimeoutMs, DEFAULT_WHOAMI_TIMEOUT_MS);
   const mode = resolveWhoamiSynthesisMode(run, cfg);
   let runResult: WhoamiExecutionResult;
@@ -857,7 +920,7 @@ async function handleWhoamiCommand(
       pythonBin,
       projectDir,
       links,
-      outputPath,
+      outputPath: stagedOutputPath,
       workspaceDir,
       whoamiTimeoutMs: timeoutMs,
     });
@@ -869,7 +932,7 @@ async function handleWhoamiCommand(
         pythonBin,
         projectDir,
         links,
-        outputPath,
+        outputPath: stagedOutputPath,
         timeoutMs,
       });
       if (fallback.ok) {
@@ -879,6 +942,7 @@ async function handleWhoamiCommand(
             `${runResult.text}\n\n` +
             "Fallback: OpenClaw synthesis failed, switched to legacy whoami mode.\n\n" +
             fallback.text,
+          generatedPath: fallback.generatedPath,
         };
       } else {
         runResult = {
@@ -898,9 +962,49 @@ async function handleWhoamiCommand(
       pythonBin,
       projectDir,
       links,
-      outputPath,
+      outputPath: stagedOutputPath,
       timeoutMs,
     });
+  }
+
+  if (!runResult.ok && runResult.generatedPath && runResult.generatedPath !== finalOutputPath) {
+    try {
+      if (await pathExists(runResult.generatedPath)) {
+        await fs.unlink(runResult.generatedPath);
+      }
+    } catch {
+      // ignore cleanup errors
+    }
+  }
+
+  if (runResult.ok && !run.noLlm) {
+    if (!runResult.generatedPath) {
+      return {
+        text: `${runResult.text}\n\n❌ Internal error: generated file path missing.`,
+      };
+    }
+    try {
+      const installed = await installGeneratedFileWithBackup({
+        generatedPath: runResult.generatedPath,
+        finalPath: finalOutputPath,
+      });
+      const installLines = [`Final target: ${installed.finalPath}`];
+      if (installed.backupPath) {
+        installLines.push(`Backup: ${installed.backupPath}`);
+      } else {
+        installLines.push("Backup: (none, target file did not exist)");
+      }
+      runResult = {
+        ok: true,
+        text: `${runResult.text}\n\n${installLines.join("\n")}`,
+        generatedPath: installed.finalPath,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        text: `${runResult.text}\n\n❌ Failed to install USER.md to final path: ${message}`,
+      };
+    }
   }
 
   if (usingQueue && !run.keepQueue && runResult.ok) {
