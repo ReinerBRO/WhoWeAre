@@ -12,7 +12,6 @@ from whoareu.models import GeneratedFiles
 _FILE_MAP = {
     "IDENTITY.md": "identity_md",
     "SOUL.md": "soul_md",
-    "AGENTS.md": "agents_md",
 }
 
 

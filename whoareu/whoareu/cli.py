@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from typing import TYPE_CHECKING
 
 import click
 
 from whoareu.config import Config
 from whoareu.models import AgentSpec
+
+if TYPE_CHECKING:
+    from llmkit import LLMConfig
 
 
 def _collect_spec(
@@ -18,6 +22,8 @@ def _collect_spec(
     reference: str | None,
     name: str | None,
     language: str,
+    llm: LLMConfig | None = None,
+    resolve_reference_alias: bool = True,
 ) -> AgentSpec:
     """Build an AgentSpec from the chosen input mode."""
     specs: list[AgentSpec] = []
@@ -36,7 +42,11 @@ def _collect_spec(
         from whoareu.collectors.reference import ReferenceCollector
 
         specs.append(ReferenceCollector().collect(
-            character=reference, agent_name=name,
+            character=reference,
+            agent_name=name,
+            language=language,
+            llm=llm,
+            resolve_alias=resolve_reference_alias,
         ))
 
     if prompt:
@@ -140,7 +150,16 @@ def main(
 
     click.echo("whoareu v0.1.0 — generating agent persona...\n")
 
-    spec = _collect_spec(prompt, template, interactive, reference, name, language)
+    spec = _collect_spec(
+        prompt,
+        template,
+        interactive,
+        reference,
+        name,
+        language,
+        llm=config.llm,
+        resolve_reference_alias=not dry_run,
+    )
 
     if dry_run:
         click.echo("AgentSpec (dry-run):\n")
@@ -158,7 +177,7 @@ def main(
     # Validate
     from whoareu.schemas import validate_all
 
-    errors = validate_all(files.identity_md, files.soul_md, files.agents_md)
+    errors = validate_all(files.identity_md, files.soul_md)
     if errors:
         click.echo("Warning: validation issues detected:", err=True)
         for fname, missing in errors.items():

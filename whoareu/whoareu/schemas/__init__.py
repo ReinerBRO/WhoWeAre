@@ -46,17 +46,10 @@ def validate_soul(md: str) -> list[str]:
     return [r for r in required if r not in headings]
 
 
-def validate_agents(md: str) -> list[str]:
-    """Validate AGENTS.md contains required sections. Returns list of missing sections."""
-    required = ["first run", "every session", "memory", "safety"]
-    headings = _extract_headings(md)
-    return [r for r in required if r not in headings]
-
-
 def validate_all(
-    identity_md: str, soul_md: str, agents_md: str
+    identity_md: str, soul_md: str
 ) -> dict[str, list[str]]:
-    """Validate all three files. Returns dict of file_name -> missing elements."""
+    """Validate both files. Returns dict of file_name -> missing elements."""
     errors: dict[str, list[str]] = {}
     missing = validate_identity(identity_md)
     if missing:
@@ -64,7 +57,4 @@ def validate_all(
     missing = validate_soul(soul_md)
     if missing:
         errors["SOUL.md"] = missing
-    missing = validate_agents(agents_md)
-    if missing:
-        errors["AGENTS.md"] = missing
     return errors

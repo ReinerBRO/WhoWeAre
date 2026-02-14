@@ -35,8 +35,7 @@ class AgentSpec(BaseModel, frozen=True):
 
 
 class GeneratedFiles(BaseModel, frozen=True):
-    """The three generated Markdown files."""
+    """The two generated Markdown files."""
 
     identity_md: str
     soul_md: str
-    agents_md: str

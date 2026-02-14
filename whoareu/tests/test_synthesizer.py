@@ -74,20 +74,6 @@ Calm and reliable.
 Read memory files.
 """
 
-_MOCK_AGENTS = """\
-# AGENTS.md
-## First Run
-Read BOOTSTRAP.md.
-## Every Session
-Read SOUL.md, USER.md.
-## Memory
-Daily notes + MEMORY.md.
-## Safety
-No destructive commands.
-## External vs Internal
-Ask before external actions.
-"""
-
 
 def _make_mock_response(content: str) -> AsyncMock:
     """Create a mock litellm response."""
@@ -98,8 +84,8 @@ def _make_mock_response(content: str) -> AsyncMock:
 
 
 @pytest.mark.asyncio
-async def test_synthesize_calls_llm_three_times() -> None:
-    responses = [_MOCK_IDENTITY, _MOCK_SOUL, _MOCK_AGENTS]
+async def test_synthesize_calls_llm_twice() -> None:
+    responses = [_MOCK_IDENTITY, _MOCK_SOUL]
     call_count = 0
 
     async def mock_acompletion(**kwargs: object) -> AsyncMock:
@@ -111,18 +97,17 @@ async def test_synthesize_calls_llm_three_times() -> None:
     spec = AgentSpec(name="TestBot", creature="AI 助手")
 
     with patch("whoareu.synthesizer.litellm.acompletion", side_effect=mock_acompletion):
-        files = await synthesize(spec, model="test-model")
+        files = await synthesize(spec)
 
-    assert call_count == 3
+    assert call_count == 2
     assert "TestBot" in files.identity_md
     assert "Core Truths" in files.soul_md
-    assert "First Run" in files.agents_md
 
 
 @pytest.mark.asyncio
 async def test_synthesize_strips_code_fences() -> None:
     fenced = f"```markdown\n{_MOCK_IDENTITY}\n```"
-    responses = [fenced, _MOCK_SOUL, _MOCK_AGENTS]
+    responses = [fenced, _MOCK_SOUL]
     idx = 0
 
     async def mock_acompletion(**kwargs: object) -> AsyncMock:
@@ -134,6 +119,6 @@ async def test_synthesize_strips_code_fences() -> None:
     spec = AgentSpec(name="TestBot")
 
     with patch("whoareu.synthesizer.litellm.acompletion", side_effect=mock_acompletion):
-        files = await synthesize(spec, model="test-model")
+        files = await synthesize(spec)
 
     assert not files.identity_md.startswith("```")

@@ -13,7 +13,6 @@ from whoareu.collectors.prompt import (
 )
 from whoareu.collectors.reference import ReferenceCollector
 from whoareu.collectors.template import TemplateCollector
-from whoareu.models import AgentSpec
 
 
 # ---------------------------------------------------------------------------
@@ -122,16 +121,71 @@ class TestTemplateCollector:
 
 
 class TestReferenceCollector:
-    def test_basic_reference(self) -> None:
+    def test_basic_reference(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "whoareu.collectors.reference._fetch_reference_context",
+            lambda *_args, **_kwargs: "",
+        )
         spec = ReferenceCollector().collect(character="贾维斯")
         assert spec.reference_character == "贾维斯"
         assert "贾维斯" in (spec.personality or "")
         assert spec.name is None
 
-    def test_with_agent_name(self) -> None:
+    def test_with_agent_name(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "whoareu.collectors.reference._fetch_reference_context",
+            lambda *_args, **_kwargs: "",
+        )
         spec = ReferenceCollector().collect(
             character="Jarvis from Iron Man",
             agent_name="Friday",
         )
         assert spec.name == "Friday"
         assert spec.reference_character == "Jarvis from Iron Man"
+
+    def test_reference_with_wiki_context(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "whoareu.collectors.reference._fetch_reference_context",
+            lambda *_args, **_kwargs: "[Wikipedia/zh] 贾维斯是托尼的智能管家。",
+        )
+        spec = ReferenceCollector().collect(character="贾维斯", language="zh")
+        assert "Ground your output" in (spec.personality or "")
+        assert spec.extra_instructions is not None
+        assert "Wikipedia/zh" in spec.extra_instructions
+
+    def test_reference_uses_alias_candidates(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "whoareu.collectors.reference._expand_reference_queries_with_llm",
+            lambda *_args, **_kwargs: ["Hatsune Miku", "初音未来"],
+        )
+
+        captured: dict[str, object] = {}
+
+        def fake_fetch(
+            character: str,
+            language: str,
+            *,
+            query_candidates: list[str] | None = None,
+        ) -> str:
+            captured["character"] = character
+            captured["language"] = language
+            captured["query_candidates"] = query_candidates
+            return ""
+
+        monkeypatch.setattr(
+            "whoareu.collectors.reference._fetch_reference_context",
+            fake_fetch,
+        )
+
+        spec = ReferenceCollector().collect(
+            character="初音未来",
+            language="zh",
+            llm=object(),  # patched resolver ignores actual LLMConfig usage
+            resolve_alias=True,
+        )
+
+        assert captured["character"] == "初音未来"
+        assert captured["language"] == "zh"
+        assert captured["query_candidates"] == ["Hatsune Miku", "初音未来"]
+        assert spec.extra_instructions is not None
+        assert "Reference name candidates" in spec.extra_instructions

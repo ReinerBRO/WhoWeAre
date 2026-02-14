@@ -102,6 +102,8 @@ Alias: `/whoami-gen ...`
 /whoareu prompt 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私
 /whoareu template otaku
 /whoareu reference 贾维斯
+/whoareu reference https://zh.wikipedia.org/wiki/J.A.R.V.I.S.
+/whoareu reference https://zh.moegirl.org.cn/初音未来
 ```
 
 Or short prompt mode:

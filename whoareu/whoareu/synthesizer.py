@@ -1,4 +1,4 @@
-"""LLM synthesis module — generates IDENTITY.md, SOUL.md, AGENTS.md sequentially."""
+"""LLM synthesis module — generates IDENTITY.md and SOUL.md sequentially."""
 
 from __future__ import annotations
 
@@ -124,35 +124,6 @@ SOUL.md 定义了 Agent 的性格内核——价值观、边界、语气和持�
 5. 用用户指定的语言书写内容（默认中文）。
 """
 
-_AGENTS_SYSTEM = """\
-你是一个 AI Agent 人格设计师。你的任务是根据用户提供的 Agent 描述、已生成的 IDENTITY.md \
-和 SOUL.md，生成一份 AGENTS.md 文件。
-
-AGENTS.md 是 Agent 的行动纲领——具体的行为规则和操作流程。
-
-## 必须包含的 Section
-
-- **First Run** — 首次启动行为（读取引导文件、自我介绍）
-- **Every Session** — 每次会话的初始化流程
-- **Memory** — 内存管理规则（日志记录、长期记忆策略）
-- **Safety** — 安全边界（不泄露数据、不执行危险命令、权限控制）
-- **External vs Internal** — 哪些操作可以自主执行，哪些需要先询问用户
-
-## 可选 Section（仅在 AgentSpec 中有相关配置时才生成）
-
-- **Group Chats** — 群聊行为规则（发言频率、反应规则）
-- **Heartbeats** — 定时任务（检查项、频率、安静时间）
-- **Tools** — 工具使用偏好
-- **Platform Formatting** — 平台适配格式规则
-
-## 要求
-
-1. 输出纯 Markdown，不要用代码块包裹。
-2. 规则必须明确、可执行、不与 SOUL.md 矛盾。
-3. 行为风格要与 IDENTITY.md 和 SOUL.md 的人格一致。
-4. Safety section 必须包含合理的默认安全规则。
-5. 用用户指定的语言书写内容（默认中文）。
-"""
 
 
 # ---------------------------------------------------------------------------
@@ -217,25 +188,6 @@ async def _generate_soul(
     return await _llm_call(_SOUL_SYSTEM, user_prompt, llm)
 
 
-async def _generate_agents(
-    spec: AgentSpec,
-    identity_md: str,
-    soul_md: str,
-    llm: LLMConfig,
-) -> str:
-    """Generate AGENTS.md, informed by IDENTITY.md and SOUL.md."""
-    user_prompt = (
-        "以下是已生成的 IDENTITY.md：\n\n"
-        f"{identity_md}\n\n"
-        "---\n\n"
-        "以下是已生成的 SOUL.md：\n\n"
-        f"{soul_md}\n\n"
-        "---\n\n"
-        "以下是 Agent 的完整描述：\n\n"
-        f"{_build_spec_description(spec)}\n\n"
-        "请根据以上信息生成 AGENTS.md。"
-    )
-    return await _llm_call(_AGENTS_SYSTEM, user_prompt, llm)
 
 
 # ---------------------------------------------------------------------------
@@ -248,9 +200,9 @@ async def synthesize(
     *,
     llm: LLMConfig | None = None,
 ) -> GeneratedFiles:
-    """Generate all three persona files sequentially.
+    """Generate IDENTITY.md and SOUL.md sequentially.
 
-    The calls are serial because each file depends on the previous ones
+    The calls are serial because SOUL.md depends on IDENTITY.md
     to maintain personality consistency.
     """
     if llm is None:
@@ -258,10 +210,8 @@ async def synthesize(
 
     identity_md = await _generate_identity(spec, llm)
     soul_md = await _generate_soul(spec, identity_md, llm)
-    agents_md = await _generate_agents(spec, identity_md, soul_md, llm)
 
     return GeneratedFiles(
         identity_md=identity_md,
         soul_md=soul_md,
-        agents_md=agents_md,
     )

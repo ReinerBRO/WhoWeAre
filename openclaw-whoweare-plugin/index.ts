@@ -419,7 +419,7 @@ function formatWhoareuHelp(): string {
     "",
     "/whoareu prompt <描述>",
     "/whoareu template <professional|casual|otaku|minimalist|chaotic>",
-    "/whoareu reference <角色参考>",
+    "/whoareu reference <角色名|维基链接|萌百链接>",
     "/whoareu <描述>   (等同于 prompt 模式)",
   ].join("\n");
 }
@@ -496,7 +496,8 @@ function buildOpenClawSynthesisPrompt(params: { links: string[]; scrapeOutput: s
     "- Use short phrases, keywords, dashes. No paragraphs.",
     "- Filter sensitive info (email, phone, ID numbers)",
     "- Interaction Guidelines is the MOST IMPORTANT section — infer communication preferences from data",
-    "- Length adapts to data volume, max 30 lines",
+    "- Hobbies and interests found in data (gaming, anime, music, sports, etc.) MUST be preserved, never omit for brevity",
+    "- Length adapts to data volume and detail level, max 40 lines",
     "- Markdown format, emoji prefixes on section headers",
     "- Use Chinese by default",
     "",
@@ -1098,7 +1099,7 @@ async function handleWhoareuCommand(
     title: "whoareu",
     successMessage:
       `✅ Persona files generated in ${workspaceDir}\n` +
-      `Files: AGENTS.md, SOUL.md, IDENTITY.md`,
+      `Files: SOUL.md, IDENTITY.md`,
   });
 }
 
@@ -1135,7 +1136,7 @@ export default function register(api: OpenClawPluginApi) {
 
   api.registerCommand({
     name: "whoareu",
-    description: "Generate AGENTS.md/SOUL.md/IDENTITY.md via whoareu.",
+    description: "Generate SOUL.md/IDENTITY.md via whoareu.",
     acceptsArgs: true,
     handler: async (ctx) => {
       try {
