@@ -34,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/ReinerBRO/WhoWeAre/main/scripts/dep
 - `llmkit/`：共享 LLM 配置层
 - `whoami/`：链接抓取与 `USER.md` 合成
 - `whoareu/`：人格生成
-- `openclaw-whoweare-plugin/`：OpenClaw 插件（`/whoami`、`/whoareu` 命令）
+- `openclaw-whoweare-plugin/`：OpenClaw 插件（`/myprofile`、`/whoareu` 命令）
 
 ## Quick Start (CLI)
 
@@ -96,19 +96,21 @@ If you vendor this repo under another workspace (for example under `openclaw/who
 
 ### 2. Use commands in OpenClaw
 
-`whoami` queue flow:
+`myprofile` queue flow:
 
 ```text
-/whoami add https://github.com/<you>
-/whoami add https://space.bilibili.com/<id>
-/whoami list
-/whoami run
+/myprofile add https://github.com/<you>
+/myprofile add https://space.bilibili.com/<id>
+/myprofile list
+/myprofile run
 ```
+
+Alias: `/whoami-gen ...`
 
 Direct run:
 
 ```text
-/whoami run https://github.com/<you> https://www.zhihu.com/people/<id>
+/myprofile run https://github.com/<you> https://www.zhihu.com/people/<id>
 ```
 
 `whoareu`:

@@ -1,10 +1,10 @@
 # OpenClaw WhoWeAre Plugin
 
-Use `whoami` and `whoareu` directly from OpenClaw commands.
+Use `/myprofile` and `/whoareu` directly from OpenClaw commands.
 
 ## What this plugin does
 
-- Adds `/whoami` command:
+- Adds `/myprofile` command:
   - queue links (`add`, `addmany`, `list`, `clear`)
   - run scraping + synthesis and write `USER.md`
 - Adds `/whoareu` command:
@@ -52,27 +52,29 @@ If a `.venv` exists in each project, the plugin uses it automatically.
 
 ## Command usage
 
-### whoami (many links workflow)
+### myprofile (many links workflow)
 
 ```text
-/whoami add https://github.com/xxx
-/whoami add https://space.bilibili.com/xxx
-/whoami list
-/whoami run
+/myprofile add https://github.com/xxx
+/myprofile add https://space.bilibili.com/xxx
+/myprofile list
+/myprofile run
 ```
 
 Direct run without queue:
 
 ```text
-/whoami run https://github.com/xxx https://www.zhihu.com/people/xxx
+/myprofile run https://github.com/xxx https://www.zhihu.com/people/xxx
 ```
 
 Optional run flags:
 
 ```text
-/whoami run --provider openai --model gpt-4o --keep-queue
-/whoami run --no-llm
+/myprofile run --provider openai --model gpt-4o --keep-queue
+/myprofile run --no-llm
 ```
+
+Alias: `/whoami-gen ...`
 
 ### whoareu
 

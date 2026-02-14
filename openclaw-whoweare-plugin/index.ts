@@ -324,15 +324,16 @@ function parseWhoamiRunOptions(input: string): WhoamiRunOptions {
 
 function formatWhoamiHelp(): string {
   return [
-    "whoami commands:",
+    "myprofile commands:",
     "",
-    "/whoami add <url>",
-    "/whoami addmany <url1> <url2> ...",
-    "/whoami list",
-    "/whoami clear",
-    "/whoami run [--provider x --model y --no-llm --keep-queue]",
-    "/whoami run <url1> <url2> ...",
+    "/myprofile add <url>",
+    "/myprofile addmany <url1> <url2> ...",
+    "/myprofile list",
+    "/myprofile clear",
+    "/myprofile run [--provider x --model y --no-llm --keep-queue]",
+    "/myprofile run <url1> <url2> ...",
     "",
+    "Alias: /whoami-gen ...",
     "Tip: 先 add 多个链接，再 run 一次生成 USER.md。",
   ].join("\n");
 }
@@ -466,7 +467,7 @@ async function handleWhoamiCommand(
   if (action === "add" || action === "addmany" || action === "import" || action === "batch") {
     const urls = extractUrls(rest);
     if (urls.length === 0) {
-      return { text: "No valid URLs found. Usage: /whoami add <url>" };
+      return { text: "No valid URLs found. Usage: /myprofile add <url>" };
     }
     const state = await readState(statePath);
     const current = state.whoamiQueues[queueKey] ?? [];
@@ -481,7 +482,7 @@ async function handleWhoamiCommand(
     const state = await readState(statePath);
     const queue = state.whoamiQueues[queueKey] ?? [];
     if (queue.length === 0) {
-      return { text: "Queue is empty. Use /whoami add <url>." };
+      return { text: "Queue is empty. Use /myprofile add <url>." };
     }
     const lines = queue.map((url, index) => `${index + 1}. ${url}`);
     return { text: `Queued links (${queue.length}):\n${lines.join("\n")}` };
@@ -510,7 +511,7 @@ async function handleWhoamiCommand(
   const usingQueue = run.explicitUrls.length === 0;
   const links = usingQueue ? queuedUrls : run.explicitUrls;
   if (links.length === 0) {
-    return { text: "No links to run. Use /whoami add <url> first." };
+    return { text: "No links to run. Use /myprofile add <url> first." };
   }
 
   const workspaceDir = resolveWorkspaceDir(api, cfg);
@@ -551,7 +552,7 @@ async function handleWhoamiCommand(
     delete state.whoamiQueues[queueKey];
     await writeState(statePath, state);
     return {
-      text: `${result.text}\nQueue cleared. Use --keep-queue on /whoami run if you want to keep it.`,
+      text: `${result.text}\nQueue cleared. Use --keep-queue on /myprofile run if you want to keep it.`,
     };
   }
 
@@ -622,7 +623,7 @@ export default function register(api: OpenClawPluginApi) {
   const cfg = normalizeConfig(api.pluginConfig);
 
   api.registerCommand({
-    name: "whoami",
+    name: "myprofile",
     description: "Queue profile links and generate USER.md via whoami.",
     acceptsArgs: true,
     handler: async (ctx) => {
@@ -630,7 +631,21 @@ export default function register(api: OpenClawPluginApi) {
         return await handleWhoamiCommand(api, cfg, ctx);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        return { text: `❌ /whoami error: ${message}` };
+        return { text: `❌ /myprofile error: ${message}` };
+      }
+    },
+  });
+
+  api.registerCommand({
+    name: "whoami-gen",
+    description: "Alias for /myprofile.",
+    acceptsArgs: true,
+    handler: async (ctx) => {
+      try {
+        return await handleWhoamiCommand(api, cfg, ctx);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { text: `❌ /whoami-gen error: ${message}` };
       }
     },
   });

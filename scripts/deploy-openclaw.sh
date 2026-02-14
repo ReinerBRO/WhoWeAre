@@ -97,6 +97,6 @@ fi
 log "Done."
 printf '\n'
 printf 'Try these commands in OpenClaw chat:\n'
-printf '  /whoami add https://github.com/yourname\n'
-printf '  /whoami run\n'
+printf '  /myprofile add https://github.com/yourname\n'
+printf '  /myprofile run\n'
 printf '  /whoareu prompt 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私\n'
