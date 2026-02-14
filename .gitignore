@@ -24,3 +24,17 @@ dist/
 .idea/
 .vscode/
 
+# OpenClaw workspace files (local only, not part of project source)
+whoami/AGENTS.md
+whoami/BOOTSTRAP.md
+whoami/HEARTBEAT.md
+whoami/IDENTITY.md
+whoami/SOUL.md
+whoami/TOOLS.md
+whoami/USER.md
+whoami/profile.md
+whoami/profileforge_plan.md
+
+# Node
+node_modules/
+

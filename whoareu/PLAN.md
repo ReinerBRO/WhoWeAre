@@ -1,7 +1,8 @@
 # WhoAreU — AI Agent 人格生成器
 
-> `whoami` 回答"我的主人是谁"（USER.md），`whoareu` 回答"你是谁"（AGENTS.md + SOUL.md + IDENTITY.md）。
+> `whoami` 回答"我的主人是谁"（USER.md），`whoareu` 回答"你是谁"（SOUL.md + IDENTITY.md）。
 > 用户描述想要什么样的 AI 助手 → LLM 生成完整的 Agent 人格定义文件。
+> `AGENTS.md` 是运维规则，与人格无关，使用 OpenClaw 自带模板即可。
 
 ---
 
@@ -13,7 +14,7 @@
 ```
 用户输入（自然语言描述 / 交互问答 / 预设模板 / 角色参考）
   → Input Collector 结构化
-  → LLM Synthesizer 分别生成三个文件
+  → LLM Synthesizer 分别生成两个文件
   → 预览 / 编辑 / 导出安装
 ```
 
@@ -21,7 +22,7 @@
 | 项目 | 输入 | 输出 | 回答的问题 |
 |------|------|------|-----------|
 | `whoami` | 社交平台链接 | `USER.md` | 我的主人是谁？ |
-| `whoareu` | 用户偏好/描述 | `AGENTS.md` + `SOUL.md` + `IDENTITY.md` | 你（Agent）是谁？ |
+| `whoareu` | 用户偏好/描述 | `SOUL.md` + `IDENTITY.md` | 你（Agent）是谁？ |
 
 ---
 
@@ -36,7 +37,7 @@ whoareu --prompt "一个叫小夜的赛博幽灵，说话毒舌但内心温柔�
   在群聊里话不多但句句到位，安全意识很强，绝不泄露主人隐私"
 ```
 
-LLM 从自然语言中提取：性格特征、行为偏好、安全边界、社交风格，分别填充到三个文件。
+LLM 从自然语言中提取：性格特征、行为偏好、安全边界、社交风格，分别填充到两个文件。
 
 ### 模式 B：交互问答（Interactive Mode）
 
