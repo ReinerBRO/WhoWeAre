@@ -2,13 +2,10 @@
 
 WhoWeAre 是一套给 OpenClaw/AI Agent 用的画像生成工具：
 
-- `whoami`（内部模块）：从公开链接抓取信息并生成 `USER.md`
+- `whoami`：从公开链接抓取信息并生成 `USER.md`
 - `whoareu`：根据你的描述生成人格文件 `SOUL.md` + `IDENTITY.md`
 - `llmkit`：共享 LLM 配置层 + OpenClaw workspace 路径解析
 - `openclaw-whoweare-plugin`：把上面的能力挂到 OpenClaw 命令里直接调用
-
-> 注意：OpenClaw 已占用 `/whoami` 指令。本项目在聊天中不使用 `/whoami`，统一使用 `/myprofile`。
-> `AGENTS.md` 不由 whoareu 生成——它是 Agent 的运维规则，与人格无关，直接使用 OpenClaw 自带的模板即可。
 
 ## One-Click Deploy (OpenClaw server)
 
@@ -56,7 +53,7 @@ cd ../whoami && python3 -m pip install -e .
 cd ../whoareu && python3 -m pip install -e .
 ```
 
-### 2. Run profile CLI (internal `whoami` module)
+### 2. Run whoami
 
 ```bash
 python -m whoami.cli \
@@ -131,8 +128,7 @@ openclaw plugins install -l ./openclaw-whoweare-plugin
 /myprofile run --mode whoami
 ```
 
-注意：不使用 `/whoami` 指令（避免和 OpenClaw 内置命令冲突）。
-兼容别名：`/whoami-gen ...`
+别名：`/whoami-gen ...`
 
 默认合成路径：`openclaw` 模式（使用 OpenClaw agent）。
 回退路径：`whoami` 模式（直接 litellm 调用）。
@@ -179,8 +175,6 @@ Config key: `plugins.entries.openclaw-whoweare.config`
 - `WWA_MODEL`
 - `WWA_API_BASE`
 - `WWA_API_KEY`
-
-说明：`/myprofile` 在默认 `openclaw` 模式下主要走 OpenClaw agent；`--provider/--model` 参数用于 `whoami` 模式或回退路径。
 
 ## License
 
