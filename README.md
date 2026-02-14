@@ -11,27 +11,17 @@ WhoWeAre 解决的就是这个问题。
 ## 效果
 
 - `/myprofile` → 从你的 GitHub、B站、知乎等主页抓取信息，合成一份 Agent 可直接消费的 `USER.md`
-- `/whoareu` → 用一句话或一个模板，生成 `IDENTITY.md`（身份）+ `SOUL.md`（性格）
+- `/whoareu` → 用一句话或一个模板，生成 `IDENTITY.md`（身份）+ `SOUL.md`（性格）。也可以直接指定一个动漫角色、电视剧角色、历史人物等已知角色的名字，系统会自动检索其维基百科信息，生成对应的身份与性格设定
 
-生成的文件会自动写入 OpenClaw workspace，Agent 下次启动时就能读取。
+生成的文件会自动写入 OpenClaw workspace，Agent 下次启动时就能读取。已有的同名文件不会被覆盖，而是自动备份。
 
-## 安装
-
-通过 OpenClaw TUI 配置插件，或手动安装：
+## 一键部署
 
 ```bash
-openclaw plugins install -l ./openclaw-whoweare-plugin
+git clone https://github.com/ReinerBRO/WhoWeAre.git
+cd WhoWeAre
+bash scripts/deploy-openclaw.sh
 ```
-
-Python 依赖：
-
-```bash
-cd llmkit && pip install -e .
-cd ../whoami && pip install -e .
-cd ../whoareu && pip install -e .
-```
-
-安装后重启 gateway。
 
 ## 使用
 
@@ -55,22 +45,15 @@ cd ../whoareu && pip install -e .
 
 支持的平台：
 
-| 平台 | 链接格式 |
-|------|----------|
-| GitHub | `github.com/<user>` |
-| GitLab | `gitlab.com/<user>` |
-| Bilibili | `space.bilibili.com/<uid>` |
-| 知乎 | `zhihu.com/people/<id>` |
-| 微博 | `weibo.com/<uid>` |
-| 豆瓣 | `douban.com/people/<id>` |
-| Google Scholar | `scholar.google.com/citations?user=<id>` |
-| 小红书 | `xiaohongshu.com/user/profile/<id>` |
-| Stack Overflow | `stackoverflow.com/users/<id>` |
-| Reddit | `reddit.com/user/<name>` |
-| Steam | `steamcommunity.com/id/<name>` |
-| Medium | `medium.com/@<user>` |
-| Dev.to | `dev.to/<user>` |
-| 其他网页 | 任意 URL（通用抓取） |
+| | 平台 | | 平台 |
+|:---:|:---|:---:|:---|
+| <img src="https://cdn.simpleicons.org/github" width="16"> | GitHub | <img src="https://cdn.simpleicons.org/stackoverflow" width="16"> | Stack Overflow |
+| <img src="https://cdn.simpleicons.org/gitlab" width="16"> | GitLab | <img src="https://cdn.simpleicons.org/reddit" width="16"> | Reddit |
+| <img src="https://cdn.simpleicons.org/bilibili" width="16"> | Bilibili | <img src="https://cdn.simpleicons.org/steam" width="16"> | Steam |
+| <img src="https://cdn.simpleicons.org/zhihu" width="16"> | 知乎 | <img src="https://cdn.simpleicons.org/medium" width="16"> | Medium |
+| <img src="https://cdn.simpleicons.org/sinaweibo" width="16"> | 微博 | <img src="https://cdn.simpleicons.org/devdotto" width="16"> | Dev.to |
+| <img src="https://cdn.simpleicons.org/douban" width="16"> | 豆瓣 | <img src="https://cdn.simpleicons.org/googlescholar" width="16"> | Google Scholar |
+| <img src="https://cdn.simpleicons.org/xiaohongshu" width="16"> | 小红书 | 🌐 | 其他网页 |
 
 ### /whoareu — 定义 Agent 的人格
 
@@ -78,12 +61,6 @@ cd ../whoareu && pip install -e .
 /whoareu 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私
 /whoareu template otaku
 /whoareu reference 贾维斯
-```
-
-## 一键部署（服务器）
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/ReinerBRO/WhoWeAre/main/scripts/deploy-openclaw.sh | bash
 ```
 
 ## 项目结构
