@@ -131,8 +131,8 @@ Other commands: `list`, `clear`, `help`.
 ### /whoareu — Define the Agent's Persona
 
 ```text
-/whoareu reference "Yui Hirasawa"
-/whoareu reference "Yui Hirasawa" --lang en       # English output
+/whoareu reference Yui Hirasawa
+/whoareu reference Yui Hirasawa --lang en       # English output
 /whoareu template otaku
 /whoareu template otaku --lang ja         # Japanese output
 /whoareu A cyber ghost named Sayo, sharp-tongued but kind, values privacy
