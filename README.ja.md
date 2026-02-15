@@ -13,7 +13,7 @@
 - 🔗 **リンクからプロファイル** — GitHub / Bilibili / 知乎などのリンクを投げるだけで `USER.md` を自動生成
 - 🎭 **一言でペルソナ作成** — 性格を記述、テンプレートを選択、またはキャラクター名を指定して `IDENTITY.md` + `SOUL.md` を生成
 - 🌐 **13+ プラットフォーム** — GitHub、GitLab、Bilibili、知乎、微博、豆瓣、Steam、Reddit など
-- 🔍 **キャラクター参照** — 「ジャービス」「初音ミク」などを入力すると、Wikipedia から自動でペルソナを構築
+- 🔍 **キャラクター参照** — 「ジャービス」「平沢唯」「初音ミク」などを入力すると、Wikipedia / 萌娘百科から自動でペルソナを構築
 - 🌍 **多言語対応** — 中国語 / 英語 / 日本語で出力可能
 - 💾 **安全な書き込み** — OpenClaw ワークスペースに自動書き込み、既存ファイルは上書きせずバックアップ
 
@@ -131,8 +131,8 @@ OpenClaw TUI または OpenClaw に接続された任意のプラットフォー
 ### /whoareu — Agent のペルソナを定義する
 
 ```text
-/whoareu reference ジャービス
-/whoareu reference ジャービス --lang en    # 英語出力
+/whoareu reference 平沢唯
+/whoareu reference 平沢唯 --lang en    # 英語出力
 /whoareu template otaku
 /whoareu template otaku --lang ja          # 日本語出力
 /whoareu サイバーゴーストの小夜、毒舌だけど優しい、プライバシー重視

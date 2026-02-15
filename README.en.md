@@ -13,7 +13,7 @@ Drop a few links, get a complete user profile. Name a character, get a full pers
 - 🔗 **Links to Profile** — Drop GitHub / Bilibili / Zhihu links, auto-scrape and synthesize `USER.md`
 - 🎭 **One-Line Persona** — Describe a personality, pick a template, or name a character to generate `IDENTITY.md` + `SOUL.md`
 - 🌐 **13+ Platforms** — GitHub, GitLab, Bilibili, Zhihu, Weibo, Douban, Steam, Reddit, and more
-- 🔍 **Character Reference** — Enter "Jarvis", "Hatsune Miku", etc. — auto-fetches Wikipedia to build the persona
+- 🔍 **Character Reference** — Enter "Jarvis", "Yui Hirasawa", "Hatsune Miku", etc. — auto-fetches Wikipedia / Moegirl Wiki to build the persona
 - 🌍 **Multilingual** — Output in Chinese / English / Japanese
 - 💾 **Safe Writes** — Auto-writes to OpenClaw workspace, existing files are backed up, never overwritten
 
@@ -131,8 +131,8 @@ Other commands: `list`, `clear`, `help`.
 ### /whoareu — Define the Agent's Persona
 
 ```text
-/whoareu reference Jarvis
-/whoareu reference Jarvis --lang en       # English output
+/whoareu reference "Yui Hirasawa"
+/whoareu reference "Yui Hirasawa" --lang en       # English output
 /whoareu template otaku
 /whoareu template otaku --lang ja         # Japanese output
 /whoareu A cyber ghost named Sayo, sharp-tongued but kind, values privacy

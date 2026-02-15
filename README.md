@@ -13,7 +13,7 @@
 - 🔗 **链接即画像** — 丢入 GitHub / B站 / 知乎等链接，自动抓取并合成 `USER.md`
 - 🎭 **一句话造人格** — 描述性格、指定模板、或直接说一个角色名，生成 `IDENTITY.md` + `SOUL.md`
 - 🌐 **13+ 平台** — GitHub、GitLab、B站、知乎、微博、豆瓣、Steam、Reddit 等
-- 🔍 **角色参照** — 输入"贾维斯""初音ミク"等已知角色，自动检索维基百科生成设定
+- 🔍 **角色参照** — 输入"贾维斯""平泽唯""初音未来"等已知角色，自动检索维基百科 / 萌娘百科生成设定
 - 🌍 **多语言** — 支持中文 / 英文 / 日文输出
 - 💾 **安全写入** — 自动写入 OpenClaw workspace，已有文件自动备份不覆盖
 
@@ -131,8 +131,8 @@ bash scripts/deploy-openclaw.sh
 ### /whoareu — 定义 Agent 的人格
 
 ```text
-/whoareu reference 贾维斯
-/whoareu reference 贾维斯 --lang en    # 英文输出
+/whoareu reference 平泽唯
+/whoareu reference 平泽唯 --lang en    # 英文输出
 /whoareu template otaku
 /whoareu template otaku --lang ja      # 日文输出
 /whoareu 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私
