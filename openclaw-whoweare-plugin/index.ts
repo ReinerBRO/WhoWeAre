@@ -156,6 +156,10 @@ function normalizeWhoareuSynthesisMode(value: unknown): WhoareuSynthesisMode | u
   return undefined;
 }
 
+function normalizeSmartPunctuation(input: string): string {
+  return input.replace(/\u2014/g, "--").replace(/\u2013/g, "-");
+}
+
 function splitFirstArg(input: string): { first: string; rest: string } {
   const trimmed = input.trim();
   if (!trimmed) {
@@ -1229,7 +1233,7 @@ async function handleWhoamiCommand(
     from?: string;
   },
 ): Promise<ReplyPayload> {
-  const input = (ctx.args ?? "").trim();
+  const input = normalizeSmartPunctuation((ctx.args ?? "").trim());
   if (!input) {
     return { text: formatWhoamiHelp() };
   }
@@ -1420,7 +1424,7 @@ async function handleWhoareuCommand(
   cfg: PluginConfig,
   ctx: { args?: string },
 ): Promise<ReplyPayload> {
-  const input = (ctx.args ?? "").trim();
+  const input = normalizeSmartPunctuation((ctx.args ?? "").trim());
   if (!input) {
     return { text: formatWhoareuHelp() };
   }
