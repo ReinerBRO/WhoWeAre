@@ -45,15 +45,22 @@ bash scripts/deploy-openclaw.sh
 
 支持的平台：
 
-| | 平台 | | 平台 |
-|:---:|:---|:---:|:---|
-| <img src="https://cdn.simpleicons.org/github" width="16"> | GitHub | <img src="https://cdn.simpleicons.org/stackoverflow" width="16"> | Stack Overflow |
-| <img src="https://cdn.simpleicons.org/gitlab" width="16"> | GitLab | <img src="https://cdn.simpleicons.org/reddit" width="16"> | Reddit |
-| <img src="https://cdn.simpleicons.org/bilibili" width="16"> | Bilibili | <img src="https://cdn.simpleicons.org/steam" width="16"> | Steam |
-| <img src="https://cdn.simpleicons.org/zhihu" width="16"> | 知乎 | <img src="https://cdn.simpleicons.org/medium" width="16"> | Medium |
-| <img src="https://cdn.simpleicons.org/sinaweibo" width="16"> | 微博 | <img src="https://cdn.simpleicons.org/devdotto" width="16"> | Dev.to |
-| <img src="https://cdn.simpleicons.org/douban" width="16"> | 豆瓣 | <img src="https://cdn.simpleicons.org/googlescholar" width="16"> | Google Scholar |
-| <img src="https://cdn.simpleicons.org/xiaohongshu" width="16"> | 小红书 | 🌐 | 其他网页 |
+| | 平台 | 链接格式 |
+|:---:|:---|:---|
+| <img src="https://cdn.simpleicons.org/github" width="16"> | GitHub | `https://github.com/<user>` |
+| <img src="https://cdn.simpleicons.org/gitlab" width="16"> | GitLab | `https://gitlab.com/<user>` |
+| <img src="https://cdn.simpleicons.org/bilibili" width="16"> | Bilibili | `https://space.bilibili.com/<uid>` |
+| <img src="https://cdn.simpleicons.org/zhihu" width="16"> | 知乎 | `https://zhihu.com/people/<id>` |
+| <img src="https://cdn.simpleicons.org/sinaweibo" width="16"> | 微博 | `https://weibo.com/<uid>` |
+| <img src="https://cdn.simpleicons.org/douban" width="16"> | 豆瓣 | `https://douban.com/people/<id>` |
+| <img src="https://cdn.simpleicons.org/googlescholar" width="16"> | Google Scholar | `https://scholar.google.com/citations?user=<id>` |
+| <img src="https://cdn.simpleicons.org/xiaohongshu" width="16"> | 小红书 | `https://xiaohongshu.com/user/profile/<id>` |
+| <img src="https://cdn.simpleicons.org/stackoverflow" width="16"> | Stack Overflow | `https://stackoverflow.com/users/<id>` |
+| <img src="https://cdn.simpleicons.org/reddit" width="16"> | Reddit | `https://reddit.com/user/<name>` |
+| <img src="https://cdn.simpleicons.org/steam" width="16"> | Steam | `https://steamcommunity.com/id/<name>` |
+| <img src="https://cdn.simpleicons.org/medium" width="16"> | Medium | `https://medium.com/@<user>` |
+| <img src="https://cdn.simpleicons.org/devdotto" width="16"> | Dev.to | `https://dev.to/<user>` |
+| 🌐 | 其他网页 | 任意 URL |
 
 ### /whoareu — 定义 Agent 的人格
 
