@@ -43,6 +43,14 @@ bash scripts/deploy-openclaw.sh
 
 其他命令：`list`、`clear`、`help`。
 
+`--lang` 指定输出语言（默认中文）：
+
+```text
+/myprofile run --lang en    # 英文
+/myprofile run --lang ja    # 日文
+/myprofile run --lang zh    # 中文（默认）
+```
+
 支持的平台：
 
 | | 平台 | 链接格式 |
@@ -68,6 +76,8 @@ bash scripts/deploy-openclaw.sh
 /whoareu 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私
 /whoareu template otaku
 /whoareu reference 贾维斯
+/whoareu reference 贾维斯 --lang en    # 英文输出
+/whoareu template otaku --lang ja      # 日文输出
 ```
 
 ## 项目结构
