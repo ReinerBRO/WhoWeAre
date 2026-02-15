@@ -4,7 +4,7 @@
 
 **English** | **[日本語](README.ja.md)** | **[中文](README.md)**
 
-> Let AI know you before the first message. Give your Agent a soul.
+> An [OpenClaw](https://github.com/openclaw/openclaw) plugin — let your Agent know you before the first message, and give it a unique soul.
 
 Drop a few links, get a complete user profile. Name a character, get a full persona. No more "I'm an AI assistant."
 
