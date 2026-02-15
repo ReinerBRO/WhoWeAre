@@ -75,11 +75,11 @@ bash scripts/deploy-openclaw.sh
 ### /whoareu — 定义 Agent 的人格
 
 ```text
-/whoareu 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私
-/whoareu template otaku
 /whoareu reference 贾维斯
 /whoareu reference 贾维斯 --lang en    # 英文输出
+/whoareu template otaku
 /whoareu template otaku --lang ja      # 日文输出
+/whoareu 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私
 ```
 
 ## 项目结构

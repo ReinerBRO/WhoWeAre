@@ -75,11 +75,11 @@ Supported platforms:
 ### /whoareu — Define the Agent's Persona
 
 ```text
-/whoareu A cyber ghost named Sayo, sharp-tongued but kind, values privacy
-/whoareu template otaku
 /whoareu reference Jarvis
 /whoareu reference Jarvis --lang en       # English output
+/whoareu template otaku
 /whoareu template otaku --lang ja         # Japanese output
+/whoareu A cyber ghost named Sayo, sharp-tongued but kind, values privacy
 ```
 
 ## Project Structure

@@ -75,11 +75,11 @@ OpenClaw TUI または OpenClaw に接続された任意のプラットフォー
 ### /whoareu — Agent のペルソナを定義する
 
 ```text
-/whoareu サイバーゴーストの小夜、毒舌だけど優しい、プライバシー重視
-/whoareu template otaku
 /whoareu reference ジャービス
 /whoareu reference ジャービス --lang en    # 英語出力
+/whoareu template otaku
 /whoareu template otaku --lang ja          # 日本語出力
+/whoareu サイバーゴーストの小夜、毒舌だけど優しい、プライバシー重視
 ```
 
 ## プロジェクト構成
