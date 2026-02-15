@@ -16,6 +16,7 @@ Drop a few links, get a complete user profile. Name a character, get a full pers
 - 🔍 **Character Reference** — Enter "Jarvis", "Yui Hirasawa", "Hatsune Miku", etc. — auto-fetches Wikipedia / Moegirl Wiki to build the persona
 - 🌍 **Multilingual** — Output in Chinese / English / Japanese
 - 💾 **Safe Writes** — Auto-writes to OpenClaw workspace, existing files are backed up, never overwritten
+- 🔄 **One-Click Switch** — Regenerate your profile or switch Agent persona anytime with a single command, old files auto-backed up
 
 ## 📸 Demo
 
