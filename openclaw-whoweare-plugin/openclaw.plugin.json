@@ -62,6 +62,10 @@
     },
     "whoareuTimeoutMs": {
       "label": "whoareu Timeout (ms)"
+    },
+    "whoareuSynthesisMode": {
+      "label": "whoareu Synthesis Mode",
+      "help": "openclaw = use OpenClaw agent synthesis (no API key needed); whoareu = direct litellm synthesis."
     }
   },
   "configSchema": {
@@ -116,6 +120,10 @@
       "whoareuTimeoutMs": {
         "type": "number",
         "minimum": 1000
+      },
+      "whoareuSynthesisMode": {
+        "type": "string",
+        "enum": ["openclaw", "whoareu"]
       }
     }
   }

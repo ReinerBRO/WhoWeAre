@@ -52,3 +52,32 @@ def test_dry_run_template_plus_prompt() -> None:
     assert result.exit_code == 0
     assert "数字精灵" in result.output
     assert "但要更毒舌" in result.output
+
+
+def test_dump_spec_with_prompt() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["--prompt", "毒舌但温柔", "--dump-spec"])
+    assert result.exit_code == 0
+    assert "毒舌但温柔" in result.output
+    # Should not contain LLM synthesis markers
+    assert "Synthesizing" not in result.output
+    assert "whoareu v0.1.0" not in result.output
+
+
+def test_dump_spec_with_reference() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "--reference", "贾维斯",
+        "--dump-spec",
+    ])
+    assert result.exit_code == 0
+    assert "贾维斯" in result.output
+    assert "Synthesizing" not in result.output
+
+
+def test_dump_spec_with_template() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ["--template", "professional", "--dump-spec"])
+    assert result.exit_code == 0
+    assert "AI 助手" in result.output
+    assert "Synthesizing" not in result.output

@@ -339,17 +339,21 @@ class ReferenceCollector(BaseCollector):
         language: str = "zh",
         llm: LLMConfig | None = None,
         resolve_alias: bool = True,
+        query_candidates: list[str] | None = None,
         **kwargs: object,
     ) -> AgentSpec:
         """Return an AgentSpec seeded from a character reference."""
-        query_candidates = [character]
-        if resolve_alias and llm is not None and not _is_http_url(character):
-            query_candidates = _expand_reference_queries_with_llm(character, language, llm)
+        if query_candidates:
+            candidates = _dedupe_strings([character, *query_candidates])
+        elif resolve_alias and llm is not None and not _is_http_url(character):
+            candidates = _expand_reference_queries_with_llm(character, language, llm)
+        else:
+            candidates = [character]
 
         reference_context = _fetch_reference_context(
             character,
             language,
-            query_candidates=query_candidates,
+            query_candidates=candidates,
         )
         personality = (
             f"Based on the reference character '{character}', "
@@ -357,8 +361,8 @@ class ReferenceCollector(BaseCollector):
             "speech patterns, and behavioral tendencies."
         )
         alias_hint = ""
-        if len(query_candidates) > 1:
-            alias_hint = f"Reference name candidates: {', '.join(query_candidates)}"
+        if len(candidates) > 1:
+            alias_hint = f"Reference name candidates: {', '.join(candidates)}"
 
         extra_instructions = None
         if reference_context:

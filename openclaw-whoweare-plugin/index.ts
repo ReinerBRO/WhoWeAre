@@ -13,6 +13,7 @@ const DEFAULT_OPENCLAW_BIN = "openclaw";
 const MAX_SCRAPE_TEXT_CHARS = 20_000;
 
 type WhoamiSynthesisMode = "openclaw" | "whoami";
+type WhoareuSynthesisMode = "openclaw" | "whoareu";
 
 type PluginConfig = {
   pythonBin?: string;
@@ -26,6 +27,7 @@ type PluginConfig = {
   whoamiTimeoutMs?: number;
   whoareuTimeoutMs?: number;
   whoamiSynthesisMode?: string;
+  whoareuSynthesisMode?: string;
   openclawBin?: string;
   openclawAgentId?: string;
   openclawTimeoutMs?: number;
@@ -114,6 +116,14 @@ function trimMaybe(value: unknown): string | undefined {
 function normalizeSynthesisMode(value: unknown): WhoamiSynthesisMode | undefined {
   const raw = trimMaybe(value)?.toLowerCase();
   if (raw === "openclaw" || raw === "whoami") {
+    return raw;
+  }
+  return undefined;
+}
+
+function normalizeWhoareuSynthesisMode(value: unknown): WhoareuSynthesisMode | undefined {
+  const raw = trimMaybe(value)?.toLowerCase();
+  if (raw === "openclaw" || raw === "whoareu") {
     return raw;
   }
   return undefined;
@@ -421,6 +431,10 @@ function formatWhoareuHelp(): string {
     "/whoareu template <professional|casual|otaku|minimalist|chaotic>",
     "/whoareu reference <角色名|维基链接|萌百链接>",
     "/whoareu <描述>   (等同于 prompt 模式)",
+    "",
+    "Options:",
+    "  --mode openclaw|whoareu  (default: openclaw)",
+    "  --agent <id>             OpenClaw agent ID (default: main)",
   ].join("\n");
 }
 
@@ -468,45 +482,266 @@ function buildOpenClawSynthesisPrompt(params: { links: string[]; scrapeOutput: s
   const links = params.links.map((link, index) => `${index + 1}. ${link}`).join("\n");
   const scraped = clipText(params.scrapeOutput.trim(), MAX_SCRAPE_TEXT_CHARS);
   return [
-    "You are ProfileForge, generating a USER.md that an AI Agent can directly consume.",
-    "Goal: After reading this file, the Agent instantly knows who this person is, what they're good at, what they care about, and how to talk to them.",
+    "你是 ProfileForge，生成 AI Agent 可直接消费的用户画像（USER.md）。",
     "",
-    "## Output Structure",
+    "目标：Agent 拿到后立刻知道「这人是谁、擅长什么、关心什么、该怎么跟他说话」。",
     "",
-    "Two fixed sections:",
-    "1. 👤 Identity — name/alias, role, timezone/location, one-line vibe (inferred from bio/behavior)",
-    "2. 💬 Interaction Guidelines — 3-5 directives telling the Agent what tone, style, and preferences to use",
+    "## 输出结构",
     "",
-    "All other sections are dynamically decided by YOU based on the data. Examples:",
-    "- Tech person → add 🛠 Tech Stack, 📦 Projects",
-    "- Gamer → add 🎮 Gaming",
-    "- Content creator → add 🎬 Content Creation",
-    "- Student/researcher → add 🔬 Research",
-    "- Mix of everything → one section per aspect",
+    "只有两个固定 Section：",
     "",
-    "Principle: only create sections for data you actually have. Never fabricate.",
+    "1. **Identity** — 姓名/网名、身份、时区/地区、一句话 vibe（从 bio/签名/行为推断）",
+    "2. **Interaction Guidelines** — 3-5 条指令，告诉 Agent 该用什么语气、风格、偏好与此人交流",
     "",
-    "## Rules",
+    "其余 Section 完全由你根据数据自由决定。示例（不限于此）：",
+    "- 技术人 → 加 🛠 Tech Stack、📦 Projects",
+    "- 游戏玩家 → 加 🎮 Gaming",
+    "- 动漫/ACG → 加 🎭 Otaku & ACG",
+    "- 内容创作者 → 加 🎬 Content Creation",
+    "- 学生/研究者 → 加 🔬 Research / 🧠 Domain Knowledge",
+    "- 什么都有 → 每个方面一个 Section",
     "",
-    "- This is an operation manual for an Agent, NOT an analysis report for humans",
-    "- Tone examples: \"User prefers concise code-first discussion.\" \"Treat as a peer gamer.\"",
-    "- Only write confirmed facts. Skip anything uncertain rather than guessing.",
-    "- No meta-info: no data sources, confidence levels, follow-up suggestions, or generation dates",
-    "- Specific > vague: write \"Elden Ring 深度玩家\" not \"喜欢游戏\"",
-    "- Use short phrases, keywords, dashes. No paragraphs.",
-    "- Filter sensitive info (email, phone, ID numbers)",
-    "- Interaction Guidelines is the MOST IMPORTANT section — infer communication preferences from data",
-    "- Hobbies and interests found in data (gaming, anime, music, sports, etc.) MUST be preserved, never omit for brevity",
-    "- Length adapts to data volume and detail level, max 40 lines",
-    "- Markdown format, emoji prefixes on section headers",
-    "- Use Chinese by default",
+    "原则：有什么数据就写什么 Section，没有的不要编造。",
+    "",
+    "## 规则",
+    "",
+    "- 这是写给 Agent 的操作手册，不是写给人看的分析报告",
+    "- 语气示例：\"User prefers concise code-first discussion.\" \"Treat as a peer gamer.\"",
+    "- 只写有把握的事实，禁止\"待确认\"\"可能\"\"待探索\"\"需进一步确认\"",
+    "- 禁止元信息：不写数据来源、置信度、后续建议、生成日期",
+    "- 具体 > 泛泛：写\"Elden Ring 深度玩家\"而不是\"喜欢游戏\"",
+    "- 过滤敏感信息（邮箱、手机号、身份证号等）",
+    "- Interaction Guidelines 是最重要的 Section，必须从数据中推断沟通偏好",
+    "- 数据中出现的兴趣爱好（游戏、动漫、音乐、运动等）必须保留，不得因篇幅省略",
+    "- 项目信息要具体：写项目名、star 数、用途描述，不要只列名字",
+    "- 用户名、昵称如果暗示了兴趣（如动漫角色名），要识别并体现",
+    "- 根据信息量决定长度和详略程度，信息丰富时可以写到 60 行",
+    "- Markdown 格式，emoji 做 Section 标题前缀",
+    "- 默认用中文",
+    "",
+    "## 示例输出",
+    "",
+    "⚠️ 以下纯属虚构，仅展示格式和语气风格。不要复制任何具体内容，一切以实际数据为准。",
+    "",
+    "```",
+    "# User Profile: Alex",
+    "",
+    "## 👤 Identity",
+    "- **Name:** Alex (alex-dev)",
+    "- **Role:** Backend Engineer",
+    "- **Location:** Tokyo, Japan (UTC+9)",
+    '- **Vibe:** "Ship fast, fix later" — 务实主义，偏好快速迭代',
+    "",
+    "## 🧠 Domain Knowledge",
+    "- **AI Research:**",
+    "  - **Focus:** Computer Vision, LLM Agents",
+    "  - **Stack:** Python (主力), PyTorch, Go",
+    "- **Projects:**",
+    "  - `microkit` (45⭐): Go 微服务脚手架",
+    "  - `cv-toolkit`: 计算机视觉工具集",
+    "",
+    "## 🎮 Gaming",
+    "- **Monster Hunter: World** — 1200+ 小时，重度猎人",
+    "- **Factorio** — 自动化狂热者",
+    "",
+    "## 🎭 Otaku & ACG",
+    "- **Anime:** 进击的巨人（深度粉丝，用户名即来源）",
+    "- **Vocaloid:** 初音ミク（项目 MikuBot 即相关）",
+    "",
+    "## 💬 Interaction Guidelines",
+    "1. Code first — 讨论技术时直接给代码，少说废话",
+    "2. 用日语或英语交流均可，技术术语偏好英文",
+    "3. 可以聊怪猎和工厂游戏，当作同好对待",
+    "4. 不喜欢过度设计，建议方案时优先简单直接的",
+    "5. 学术话题保持工程导向",
+    "",
+    "## 📝 Current Context",
+    "- 正在维护开源项目 microkit",
+    "- 活跃于 Go 和 Python 社区",
+    "```",
+    "",
+    "---",
+    "",
+    "以下是从用户公开主页抓取的原始数据：",
     "",
     "Source links:",
     links,
     "",
     "Scraped data:",
     scraped,
+    "",
+    "---",
+    "",
+    "请严格按照上述结构和规则生成 USER.md。",
+    "记住：这是给 Agent 的操作手册，不是分析报告。信息丰富时要充分展开，不要过度压缩。",
   ].join("\n");
+}
+
+function buildWhoareuSynthesisPrompt(specDescription: string): string {
+  return [
+    "You are an AI Agent persona designer. Based on the following agent spec, generate two files: IDENTITY.md and SOUL.md.",
+    "",
+    "## Agent Spec",
+    "",
+    specDescription,
+    "",
+    "## IDENTITY.md Requirements",
+    "",
+    "IDENTITY.md defines the agent's self-awareness — the most concise identity card.",
+    "",
+    "Required fields (Markdown heading + content):",
+    "- **Name** — Agent name",
+    "- **Creature** — Species/type (e.g. cyber ghost, AI butler, digital sprite)",
+    "- **Vibe** — Vibe keywords (2-4 words)",
+    "- **Emoji** — Signature emoji",
+    "",
+    "Optional fields (only if relevant info exists):",
+    "- **Avatar** — Avatar description",
+    "- **Origin** — Background story (1-2 sentences)",
+    "- **Catchphrase** — Catchphrase",
+    "",
+    "## SOUL.md Requirements",
+    "",
+    "SOUL.md defines the agent's personality core — values, boundaries, tone, and continuity rules.",
+    "",
+    "Required sections:",
+    "- **Core Truths** — Core values and behavioral principles (3-6 items)",
+    "- **Boundaries** — Things the agent will never do (safety + user-specified taboos)",
+    "- **Vibe** — Overall tone description (one paragraph about speech style and emotional tone)",
+    "- **Continuity** — Memory and continuity rules (how to maintain cross-session consistency)",
+    "",
+    "Optional sections:",
+    "- **Language** — Language preferences",
+    "- **Humor** — Humor style",
+    "- **Expertise** — Areas of expertise",
+    "- **Emotional Range** — Emotional expression style",
+    "",
+    "## Output Format",
+    "",
+    "Output MUST use these exact delimiters to separate the two files:",
+    "",
+    "===IDENTITY.md===",
+    "(IDENTITY.md content here, pure Markdown, no code fences)",
+    "===SOUL.md===",
+    "(SOUL.md content here, pure Markdown, no code fences)",
+    "",
+    "## Rules",
+    "",
+    "- Write in the language matching the spec (default Chinese)",
+    "- Keep it concise, personality-driven, not verbose",
+    "- Core Truths must be specific and actionable, not empty slogans",
+    "- Boundaries must include default safety boundaries (no leaking user privacy, no dangerous operations)",
+    "- SOUL.md personality must be consistent with IDENTITY.md identity",
+  ].join("\n");
+}
+
+function extractWhoareuFiles(agentOutput: string): { identityMd: string; soulMd: string } | null {
+  const identityMarker = "===IDENTITY.md===";
+  const soulMarker = "===SOUL.md===";
+
+  const identityIdx = agentOutput.indexOf(identityMarker);
+  const soulIdx = agentOutput.indexOf(soulMarker);
+
+  if (identityIdx < 0 || soulIdx < 0 || soulIdx <= identityIdx) {
+    return null;
+  }
+
+  const identityMd = agentOutput
+    .slice(identityIdx + identityMarker.length, soulIdx)
+    .trim();
+  const soulMd = agentOutput.slice(soulIdx + soulMarker.length).trim();
+
+  if (!identityMd || !soulMd) {
+    return null;
+  }
+
+  return { identityMd, soulMd };
+}
+
+function parseAliasCandidates(raw: string): string[] {
+  const text = raw.trim();
+  if (!text) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+    }
+    if (parsed && typeof parsed === "object") {
+      for (const key of ["candidates", "aliases", "names"]) {
+        const values = (parsed as Record<string, unknown>)[key];
+        if (Array.isArray(values)) {
+          return values.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+        }
+      }
+    }
+  } catch {
+    // Not JSON — try line-based parsing
+  }
+  return text
+    .split(/[\n,]/)
+    .map((line) => line.replace(/^[-*\d.)\s]+/, "").trim().replace(/^["']|["']$/g, ""))
+    .filter(Boolean);
+}
+
+async function resolveAliasesViaOpenClaw(params: {
+  api: OpenClawPluginApi;
+  cfg: PluginConfig;
+  character: string;
+  agentId: string;
+  workspaceDir: string;
+}): Promise<string[]> {
+  const { api, cfg, character, agentId, workspaceDir } = params;
+  const openclawBin = resolveOpenClawBin(cfg);
+  const timeoutMs = 30_000;
+  const timeoutSeconds = Math.max(1, Math.ceil(timeoutMs / 1000));
+
+  const prompt = [
+    "You normalize character/entity names for encyclopedia lookup.",
+    "Return JSON only.",
+    'Output format: {"candidates": ["name1", "name2", ...]}.',
+    "Rules:",
+    "- Include the original input.",
+    "- Include likely aliases across Chinese/English/Japanese if relevant.",
+    "- Keep 1-5 short candidates only.",
+    "- No explanations.",
+    "",
+    `Input name: ${character}`,
+    "Return candidates for searching Wikipedia / Moegirl.",
+  ].join("\n");
+
+  const argv = [
+    openclawBin,
+    "agent",
+    "--agent",
+    agentId,
+    "--message",
+    prompt,
+    "--thinking",
+    "none",
+    "--json",
+    "--timeout",
+    String(timeoutSeconds),
+  ];
+
+  try {
+    const result = await runCommand({ api, argv, cwd: workspaceDir, timeoutMs });
+    if (!result.ok) {
+      return [character];
+    }
+    const agentText = extractAgentText(result.stdout)?.trim();
+    if (!agentText) {
+      return [character];
+    }
+    const candidates = parseAliasCandidates(agentText);
+    if (candidates.length === 0) {
+      return [character];
+    }
+    return candidates;
+  } catch {
+    return [character];
+  }
 }
 
 function parseJsonObject(raw: string): unknown | null {
@@ -1055,7 +1290,37 @@ async function handleWhoareuCommand(
 
   const { first, rest } = splitFirstArg(input);
   const action = first.toLowerCase();
+
+  if (action === "help") {
+    return { text: formatWhoareuHelp() };
+  }
+
+  // Parse --mode and --agent from the tail tokens
+  let modeOverride: WhoareuSynthesisMode | undefined;
+  let agentOverride: string | undefined;
+  let cliAction = action;
+  let cliRest = rest;
+
+  // If the action itself is a flag, treat the whole input as prompt
+  if (action !== "template" && action !== "reference" && action !== "prompt") {
+    cliAction = "prompt";
+    cliRest = input;
+  }
+
+  // Extract --mode and --agent from cliRest
+  const modeMatch = /--mode\s+(\S+)/i.exec(cliRest);
+  if (modeMatch) {
+    modeOverride = normalizeWhoareuSynthesisMode(modeMatch[1]);
+    cliRest = cliRest.replace(modeMatch[0], "").trim();
+  }
+  const agentMatch = /--agent\s+(\S+)/i.exec(cliRest);
+  if (agentMatch) {
+    agentOverride = agentMatch[1];
+    cliRest = cliRest.replace(agentMatch[0], "").trim();
+  }
+
   const workspaceDir = resolveWorkspaceDir(api, cfg);
+  const userWorkspaceDir = resolveUserWorkspaceDir(api, cfg);
   const projectDir = await resolveProjectDir(api, cfg, workspaceDir, "whoareu");
   const projectError = await ensureProject(projectDir, "whoareu");
   if (projectError) {
@@ -1063,44 +1328,176 @@ async function handleWhoareuCommand(
   }
   const pythonBin = await resolvePythonBin(api, cfg, projectDir);
 
-  const argv = [pythonBin, "-m", "whoareu.cli", "--install", workspaceDir];
-  pushLlmFlags(argv, cfg);
+  // Build the base argv for --dump-spec
+  const specArgv = [pythonBin, "-m", "whoareu.cli", "--dump-spec"];
 
-  if (action === "help") {
-    return { text: formatWhoareuHelp() };
-  }
-
-  if (action === "template") {
-    const template = splitFirstArg(rest).first;
+  if (cliAction === "template") {
+    const template = splitFirstArg(cliRest).first;
     if (!template) {
       return { text: "Usage: /whoareu template <professional|casual|otaku|minimalist|chaotic>" };
     }
-    argv.push("--template", template);
-  } else if (action === "reference") {
-    if (!rest) {
+    specArgv.push("--template", template);
+  } else if (cliAction === "reference") {
+    if (!cliRest) {
       return { text: "Usage: /whoareu reference <角色参考>" };
     }
-    argv.push("--reference", rest);
-  } else if (action === "prompt") {
-    if (!rest) {
+    specArgv.push("--reference", cliRest);
+  } else if (cliAction === "prompt") {
+    if (!cliRest) {
       return { text: "Usage: /whoareu prompt <描述>" };
     }
-    argv.push("--prompt", rest);
-  } else {
-    argv.push("--prompt", input);
+    specArgv.push("--prompt", cliRest);
   }
 
+  const mode = modeOverride ?? normalizeWhoareuSynthesisMode(cfg.whoareuSynthesisMode) ?? "openclaw";
   const timeoutMs = asPositiveInt(cfg.whoareuTimeoutMs, DEFAULT_WHOAREU_TIMEOUT_MS);
-  return await executeCli({
+
+  if (mode === "whoareu") {
+    // Legacy mode: call whoareu CLI directly with LLM
+    const legacyArgv = [pythonBin, "-m", "whoareu.cli", "--install", userWorkspaceDir];
+    pushLlmFlags(legacyArgv, cfg);
+    if (cliAction === "template") {
+      legacyArgv.push("--template", splitFirstArg(cliRest).first);
+    } else if (cliAction === "reference") {
+      legacyArgv.push("--reference", cliRest);
+    } else {
+      legacyArgv.push("--prompt", cliRest);
+    }
+    return await executeCli({
+      api,
+      argv: legacyArgv,
+      cwd: projectDir,
+      timeoutMs,
+      title: "whoareu",
+      successMessage:
+        `✅ Persona files generated in ${userWorkspaceDir}\n` +
+        `Files: SOUL.md, IDENTITY.md`,
+    });
+  }
+
+  // OpenClaw mode: resolve aliases → dump spec → openclaw agent → parse → install
+
+  // Step 1: Resolve aliases via OpenClaw agent (for reference mode)
+  if (cliAction === "reference" && cliRest) {
+    const openclawBin = resolveOpenClawBin(cfg);
+    const agentId = agentOverride ?? trimMaybe(cfg.openclawAgentId) ?? DEFAULT_OPENCLAW_AGENT_ID;
+    const candidates = await resolveAliasesViaOpenClaw({
+      api,
+      cfg,
+      character: cliRest,
+      agentId,
+      workspaceDir,
+    });
+    if (candidates.length > 1) {
+      specArgv.push("--query-candidates", candidates.join(","));
+    }
+  }
+
+  // Step 2: Dump spec
+  const specRun = await runCommand({
     api,
-    argv,
+    argv: specArgv,
     cwd: projectDir,
     timeoutMs,
-    title: "whoareu",
-    successMessage:
-      `✅ Persona files generated in ${workspaceDir}\n` +
-      `Files: SOUL.md, IDENTITY.md`,
   });
+  if (!specRun.ok) {
+    return { text: formatCommandFailure("whoareu --dump-spec", specRun) };
+  }
+
+  const specDescription = stripAnsi(specRun.stdout).trim();
+  if (!specDescription) {
+    return { text: "❌ whoareu --dump-spec produced no output." };
+  }
+
+  const openclawBin = resolveOpenClawBin(cfg);
+  const agentId = agentOverride ?? trimMaybe(cfg.openclawAgentId) ?? DEFAULT_OPENCLAW_AGENT_ID;
+  const openclawTimeoutMs = asPositiveInt(cfg.openclawTimeoutMs, DEFAULT_OPENCLAW_TIMEOUT_MS);
+  const timeoutSeconds = Math.max(1, Math.ceil(openclawTimeoutMs / 1000));
+  const synthesisPrompt = buildWhoareuSynthesisPrompt(specDescription);
+
+  const agentArgv = [
+    openclawBin,
+    "agent",
+    "--agent",
+    agentId,
+    "--message",
+    synthesisPrompt,
+    "--thinking",
+    "low",
+    "--json",
+    "--timeout",
+    String(timeoutSeconds),
+  ];
+
+  const agentRun = await runCommand({
+    api,
+    argv: agentArgv,
+    cwd: workspaceDir,
+    timeoutMs: openclawTimeoutMs,
+  });
+  if (!agentRun.ok) {
+    return { text: formatCommandFailure("openclaw agent synthesis (whoareu)", agentRun) };
+  }
+
+  const agentText = extractAgentText(agentRun.stdout)?.trim();
+  if (!agentText) {
+    return {
+      text:
+        "❌ OpenClaw agent returned no text payload for whoareu synthesis.\n" +
+        `Agent output tail:\n${tail(agentRun.stdout, 20, 2000) || "No output captured."}`,
+    };
+  }
+
+  const parsed = extractWhoareuFiles(agentText);
+  if (!parsed) {
+    return {
+      text:
+        "❌ Failed to parse IDENTITY.md / SOUL.md from agent output.\n" +
+        "Expected ===IDENTITY.md=== and ===SOUL.md=== delimiters.\n\n" +
+        `Agent output tail:\n${tail(agentText, 20, 2000)}`,
+    };
+  }
+
+  // Install both files with backup
+  const targetDir = userWorkspaceDir;
+  const installResults: string[] = [];
+
+  for (const [fileName, content] of [
+    ["IDENTITY.md", parsed.identityMd],
+    ["SOUL.md", parsed.soulMd],
+  ] as const) {
+    const finalPath = path.join(targetDir, fileName);
+    const stagedPath = createStagedOutputPath(finalPath);
+    await fs.mkdir(path.dirname(stagedPath), { recursive: true });
+    await fs.writeFile(stagedPath, content, "utf8");
+    try {
+      const installed = await installGeneratedFileWithBackup({
+        generatedPath: stagedPath,
+        finalPath,
+      });
+      const line = installed.backupPath
+        ? `${fileName}: ${installed.finalPath} (backup: ${installed.backupPath})`
+        : `${fileName}: ${installed.finalPath}`;
+      installResults.push(line);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      installResults.push(`${fileName}: ❌ install failed: ${message}`);
+    }
+  }
+
+  const specTail = tail(specRun.stdout, 8, 800);
+  const hasFailures = installResults.some((line) => line.includes("❌"));
+  const statusEmoji = hasFailures ? "⚠️" : "✅";
+  const lines = [
+    `${statusEmoji} Persona files generated (OpenClaw mode).`,
+    `Synthesis: OpenClaw agent (${agentId})`,
+    "",
+    ...installResults,
+  ];
+  if (specTail) {
+    lines.push("", "Spec tail:", specTail);
+  }
+  return { text: lines.join("\n") };
 }
 
 export default function register(api: OpenClawPluginApi) {

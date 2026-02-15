@@ -20,10 +20,11 @@ _SYSTEM_PROMPT = """\
 2. **Interaction Guidelines** — 3-5 条指令，告诉 Agent 该用什么语气、风格、偏好与此人交流
 
 其余 Section 完全由你根据数据自由决定。示例（不限于此）：
-- 技术人 → 加 Tech Stack、Projects
-- 游戏玩家 → 加 Gaming
-- 内容创作者 → 加 Content Creation
-- 学生/研究者 → 加 Research
+- 技术人 → 加 🛠 Tech Stack、📦 Projects
+- 游戏玩家 → 加 🎮 Gaming
+- 动漫/ACG → 加 🎭 Otaku & ACG
+- 内容创作者 → 加 🎬 Content Creation
+- 学生/研究者 → 加 🔬 Research / 🧠 Domain Knowledge
 - 什么都有 → 每个方面一个 Section
 
 原则：有什么数据就写什么 Section，没有的不要编造。
@@ -35,11 +36,12 @@ _SYSTEM_PROMPT = """\
 - 只写有把握的事实，禁止"待确认""可能""待探索""需进一步确认"
 - 禁止元信息：不写数据来源、置信度、后续建议、生成日期
 - 具体 > 泛泛：写"Elden Ring 深度玩家"而不是"喜欢游戏"
-- 用短句、关键词、破折号，不写段落
 - 过滤敏感信息（邮箱、手机号、身份证号等）
 - Interaction Guidelines 是最重要的 Section，必须从数据中推断沟通偏好
 - 数据中出现的兴趣爱好（游戏、动漫、音乐、运动等）必须保留，不得因篇幅省略
-- 根据信息量决定长度和详略程度，最多 40 行
+- 项目信息要具体：写项目名、star 数、用途描述，不要只列名字
+- 用户名、昵称如果暗示了兴趣（如动漫角色名），要识别并体现
+- 根据信息量决定长度和详略程度，信息丰富时可以写到 60 行
 - Markdown 格式，emoji 做 Section 标题前缀
 
 ## 示例输出
@@ -55,21 +57,32 @@ _SYSTEM_PROMPT = """\
 - **Location:** Tokyo, Japan (UTC+9)
 - **Vibe:** "Ship fast, fix later" — 务实主义，偏好快速迭代
 
-## 🛠 Tech Stack
-- **Languages:** Go (主力), Python, TypeScript
-- **Focus:** 分布式系统、API 设计
-- **Projects:** microkit (45⭐) — Go 微服务脚手架
+## 🧠 Domain Knowledge
+- **AI Research:**
+  - **Focus:** Computer Vision, LLM Agents
+  - **Stack:** Python (主力), PyTorch, Go
+- **Projects:**
+  - `microkit` (45⭐): Go 微服务脚手架
+  - `cv-toolkit`: 计算机视觉工具集
 
 ## 🎮 Gaming
 - **Monster Hunter: World** — 1200+ 小时，重度猎人
 - **Factorio** — 自动化狂热者
+
+## 🎭 Otaku & ACG
+- **Anime:** 进击的巨人（深度粉丝，用户名即来源）
+- **Vocaloid:** 初音ミク（项目 MikuBot 即相关）
 
 ## 💬 Interaction Guidelines
 1. Code first — 讨论技术时直接给代码，少说废话
 2. 用日语或英语交流均可，技术术语偏好英文
 3. 可以聊怪猎和工厂游戏，当作同好对待
 4. 不喜欢过度设计，建议方案时优先简单直接的
-5. 学术话题不感兴趣，保持工程导向
+5. 学术话题保持工程导向
+
+## 📝 Current Context
+- 正在维护开源项目 microkit
+- 活跃于 Go 和 Python 社区
 ```
 """
 

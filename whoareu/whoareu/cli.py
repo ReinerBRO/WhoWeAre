@@ -24,6 +24,7 @@ def _collect_spec(
     language: str,
     llm: LLMConfig | None = None,
     resolve_reference_alias: bool = True,
+    query_candidates: list[str] | None = None,
 ) -> AgentSpec:
     """Build an AgentSpec from the chosen input mode."""
     specs: list[AgentSpec] = []
@@ -47,6 +48,7 @@ def _collect_spec(
             language=language,
             llm=llm,
             resolve_alias=resolve_reference_alias,
+            query_candidates=query_candidates,
         ))
 
     if prompt:
@@ -98,6 +100,8 @@ def _merge_specs(
 @click.option("--language", default="zh", help="Output language (zh/en)")
 @click.option("--preview", is_flag=True, help="Preview without writing files")
 @click.option("--dry-run", is_flag=True, help="Show AgentSpec without calling LLM")
+@click.option("--dump-spec", is_flag=True, help="Output spec description text for external synthesis (no LLM call)")
+@click.option("--query-candidates", default=None, help="Comma-separated alias candidates for wiki search (used with --dump-spec)")
 @click.option("--install", default=None, help="Install directly to OpenClaw workspace path")
 def main(
     prompt: str | None,
@@ -113,6 +117,8 @@ def main(
     language: str,
     preview: bool,
     dry_run: bool,
+    dump_spec: bool,
+    query_candidates: str | None,
     install: str | None,
 ) -> None:
     """whoareu — AI Agent Persona Generator."""
@@ -147,6 +153,28 @@ def main(
     if not any([prompt, template, interactive, reference]):
         click.echo("No input mode selected. Use --prompt, --template, --interactive, or --reference.")
         sys.exit(1)
+
+    if dump_spec:
+        candidates = (
+            [c.strip() for c in query_candidates.split(",") if c.strip()]
+            if query_candidates
+            else None
+        )
+        spec = _collect_spec(
+            prompt,
+            template,
+            interactive,
+            reference,
+            name,
+            language,
+            llm=config.llm,
+            resolve_reference_alias=False,
+            query_candidates=candidates,
+        )
+        from whoareu.synthesizer import _build_spec_description
+
+        click.echo(_build_spec_description(spec))
+        return
 
     click.echo("whoareu v0.1.0 — generating agent persona...\n")
 
