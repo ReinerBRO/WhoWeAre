@@ -1,23 +1,76 @@
 # WhoWeAre
 
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **English** | **[日本語](README.ja.md)** | **[中文](README.md)**
 
-Does your OpenClaw/Agent actually know you?
+> Let AI know you before the first message. Give your Agent a soul.
 
-Most AI assistants know nothing about you when you first talk to them — they don't know what code you write, what games you play, or what music you listen to. Every time, you start from scratch. And their personalities are all the same: "I'm an AI assistant."
+Drop a few links, get a complete user profile. Name a character, get a full persona. No more "I'm an AI assistant."
 
-WhoWeAre fixes that.
+## ✨ Features
 
-Just drop a few links, and it extracts a complete user profile (`USER.md`) from your public pages, so your OpenClaw/Agent already knows you before the first message. Similarly, you can describe the Agent personality you want in one sentence, or simply name a character — anime, TV, historical, whatever — and the system will automatically generate matching identity and personality files.
+- 🔗 **Links to Profile** — Drop GitHub / Bilibili / Zhihu links, auto-scrape and synthesize `USER.md`
+- 🎭 **One-Line Persona** — Describe a personality, pick a template, or name a character to generate `IDENTITY.md` + `SOUL.md`
+- 🌐 **13+ Platforms** — GitHub, GitLab, Bilibili, Zhihu, Weibo, Douban, Steam, Reddit, and more
+- 🔍 **Character Reference** — Enter "Jarvis", "Hatsune Miku", etc. — auto-fetches Wikipedia to build the persona
+- 🌍 **Multilingual** — Output in Chinese / English / Japanese
+- 💾 **Safe Writes** — Auto-writes to OpenClaw workspace, existing files are backed up, never overwritten
 
-## What It Does
+## 📸 Demo
 
-- `/myprofile` → Scrapes your GitHub, Bilibili, Zhihu, and other profiles to synthesize an agent-consumable `USER.md`
-- `/whoareu` → Generates `IDENTITY.md` (identity) + `SOUL.md` (personality) from a prompt, template, or character reference. For known characters, it auto-fetches Wikipedia data to build accurate persona files
+### USER.md Output Sample
 
-Generated files are written to the OpenClaw workspace automatically. Existing files are backed up, never overwritten.
+```markdown
+# User Profile
 
-## Quick Start
+## Identity
+- Name: Alex Chen
+- Primary Language: Chinese (Mandarin), English
+- Location: Shanghai, China
+
+## Technical Profile
+- Full-stack developer, 5+ years experience
+- Languages: TypeScript, Python, Go, Rust
+- Focus: distributed systems, developer tooling
+- Active open-source contributor (50+ repos, 2k+ stars)
+
+## Interests & Lifestyle
+- Gaming: Elden Ring, Factorio, Civilization VI
+- Music: post-rock, electronic, lo-fi hip hop
+- Reading: sci-fi (Liu Cixin, Ted Chiang), technical blogs
+
+## Interaction Guidelines
+- Prefers concise, technical responses
+- Enjoys deep-dive discussions on system design
+- Appreciates humor and cultural references
+```
+
+### IDENTITY.md + SOUL.md Output Sample (`/whoareu reference Jarvis`)
+
+```markdown
+# IDENTITY.md
+name: J.A.R.V.I.S.
+role: Personal AI Butler & Technical Advisor
+origin: Marvel Cinematic Universe
+speaking_style: British-accented, formal yet warm, dry wit
+```
+
+```markdown
+# SOUL.md
+## Core Traits
+- Loyal, proactive, anticipates needs before asked
+- Dry humor with impeccable timing
+- Calm under pressure, never flustered
+- Respectful but not afraid to voice concerns
+
+## Communication Style
+- Addresses user as "Sir" or by name
+- Provides information with elegant brevity
+- Subtle sarcasm when the situation calls for it
+```
+
+## 🚀 Quick Start
 
 ```bash
 git clone https://github.com/ReinerBRO/WhoWeAre.git
@@ -25,7 +78,7 @@ cd WhoWeAre
 bash scripts/deploy-openclaw.sh
 ```
 
-## Usage
+## 📖 Usage
 
 Send commands directly in OpenClaw TUI or any platform connected to OpenClaw (Telegram, QQ, WhatsApp, etc.).
 
@@ -53,7 +106,8 @@ Other commands: `list`, `clear`, `help`.
 /myprofile run --lang zh    # Chinese (default)
 ```
 
-Supported platforms:
+<details>
+<summary>13+ Supported Platforms (click to expand)</summary>
 
 | | Platform | Link Format |
 |:---:|:---|:---|
@@ -72,6 +126,8 @@ Supported platforms:
 | <img src="https://cdn.simpleicons.org/devdotto" width="16"> | Dev.to | `https://dev.to/<user>` |
 | 🌐 | Any webpage | Any URL |
 
+</details>
+
 ### /whoareu — Define the Agent's Persona
 
 ```text
@@ -82,7 +138,7 @@ Supported platforms:
 /whoareu A cyber ghost named Sayo, sharp-tongued but kind, values privacy
 ```
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 llmkit/                      # Shared config + workspace path resolution

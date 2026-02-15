@@ -1,23 +1,76 @@
 # WhoWeAre
 
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **[English](README.en.md)** | **[日本語](README.ja.md)** | **中文**
 
-你的 OpenClaw/Agent 认识你吗？
+> 让 AI 在第一句话之前就认识你，让 Agent 拥有灵魂。
 
-大多数 AI 助手在第一次对话时，对你一无所知——不知道你写什么代码、玩什么游戏、听什么歌。每次都要从头介绍自己，每次都要重新建立默契。而且它们的性格千篇一律，永远是那个"我是一个 AI 助手"。
+丢几个链接，自动生成你的用户画像；说一个名字，自动生成 Agent 的身份与性格。不再千篇一律的"我是一个 AI 助手"。
 
-WhoWeAre 解决的就是这个问题。
+## ✨ 特性
 
-只需要丢几个链接，它就能从你的公开主页里提取出一份完整的用户画像（`USER.md`），让 OpenClaw/Agent 在第一句话之前就已经了解你。同样地，你可以用一句话描述想要的 Agent 性格，或者直接指定一个人物的名字——无论是动漫角色、影视角色还是历史人物——系统会自动参照该人物生成对应的身份与性格设定。
+- 🔗 **链接即画像** — 丢入 GitHub / B站 / 知乎等链接，自动抓取并合成 `USER.md`
+- 🎭 **一句话造人格** — 描述性格、指定模板、或直接说一个角色名，生成 `IDENTITY.md` + `SOUL.md`
+- 🌐 **13+ 平台** — GitHub、GitLab、B站、知乎、微博、豆瓣、Steam、Reddit 等
+- 🔍 **角色参照** — 输入"贾维斯""初音ミク"等已知角色，自动检索维基百科生成设定
+- 🌍 **多语言** — 支持中文 / 英文 / 日文输出
+- 💾 **安全写入** — 自动写入 OpenClaw workspace，已有文件自动备份不覆盖
 
-## 效果
+## 📸 Demo
 
-- `/myprofile` → 从你的 GitHub、B站、知乎等主页抓取信息，合成一份 Agent 可直接消费的 `USER.md`
-- `/whoareu` → 用一句话或一个模板，生成 `IDENTITY.md`（身份）+ `SOUL.md`（性格）。也可以直接指定一个动漫角色、电视剧角色、历史人物等已知角色的名字，系统会自动检索其维基百科信息，生成对应的身份与性格设定
+### USER.md 生成示例
 
-生成的文件会自动写入 OpenClaw workspace，Agent 下次启动时就能读取。已有的同名文件不会被覆盖，而是自动备份。
+```markdown
+# User Profile
 
-## 一键部署
+## Identity
+- Name: Alex Chen
+- Primary Language: Chinese (Mandarin), English
+- Location: Shanghai, China
+
+## Technical Profile
+- Full-stack developer, 5+ years experience
+- Languages: TypeScript, Python, Go, Rust
+- Focus: distributed systems, developer tooling
+- Active open-source contributor (50+ repos, 2k+ stars)
+
+## Interests & Lifestyle
+- Gaming: Elden Ring, Factorio, Civilization VI
+- Music: post-rock, electronic, lo-fi hip hop
+- Reading: sci-fi (Liu Cixin, Ted Chiang), technical blogs
+
+## Interaction Guidelines
+- Prefers concise, technical responses
+- Enjoys deep-dive discussions on system design
+- Appreciates humor and cultural references
+```
+
+### IDENTITY.md + SOUL.md 生成示例（`/whoareu reference 贾维斯`）
+
+```markdown
+# IDENTITY.md
+name: J.A.R.V.I.S.
+role: Personal AI Butler & Technical Advisor
+origin: Marvel Cinematic Universe
+speaking_style: British-accented, formal yet warm, dry wit
+```
+
+```markdown
+# SOUL.md
+## Core Traits
+- Loyal, proactive, anticipates needs before asked
+- Dry humor with impeccable timing
+- Calm under pressure, never flustered
+- Respectful but not afraid to voice concerns
+
+## Communication Style
+- Addresses user as "Sir" or by name
+- Provides information with elegant brevity
+- Subtle sarcasm when the situation calls for it
+```
+
+## 🚀 一键部署
 
 ```bash
 git clone https://github.com/ReinerBRO/WhoWeAre.git
@@ -25,7 +78,7 @@ cd WhoWeAre
 bash scripts/deploy-openclaw.sh
 ```
 
-## 使用
+## 📖 使用
 
 在 OpenClaw TUI 或任何接入了 OpenClaw 的聊天平台（Telegram、QQ、WhatsApp 等）中直接发送命令。
 
@@ -53,7 +106,8 @@ bash scripts/deploy-openclaw.sh
 /myprofile run --lang zh    # 中文（默认）
 ```
 
-支持的平台：
+<details>
+<summary>支持 13+ 平台（点击展开）</summary>
 
 | | 平台 | 链接格式 |
 |:---:|:---|:---|
@@ -72,6 +126,8 @@ bash scripts/deploy-openclaw.sh
 | <img src="https://cdn.simpleicons.org/devdotto" width="16"> | Dev.to | `https://dev.to/<user>` |
 | 🌐 | 其他网页 | 任意 URL |
 
+</details>
+
 ### /whoareu — 定义 Agent 的人格
 
 ```text
@@ -82,7 +138,7 @@ bash scripts/deploy-openclaw.sh
 /whoareu 一个叫小夜的赛博幽灵，毒舌但温柔，重视隐私
 ```
 
-## 项目结构
+## 📁 项目结构
 
 ```
 llmkit/                      # 共享配置 + workspace 路径解析
