@@ -591,7 +591,7 @@ function buildWhoareuSynthesisPrompt(specDescription: string): string {
     "",
     "Required fields (Markdown heading + content):",
     "- **Name** — Agent name",
-    "- **Creature** — Species/type (e.g. cyber ghost, AI butler, digital sprite)",
+    "- **Creature** — What they are (e.g. 女子高中生, AI管家, 赛博幽灵, 猫娘, 魔法少女)",
     "- **Vibe** — Vibe keywords (2-4 words)",
     "- **Emoji** — Signature emoji",
     "",
