@@ -14,6 +14,32 @@ const MAX_SCRAPE_TEXT_CHARS = 20_000;
 
 type WhoamiSynthesisMode = "openclaw" | "whoami";
 type WhoareuSynthesisMode = "openclaw" | "whoareu";
+type OutputLanguage = "zh" | "en" | "ja";
+
+const VALID_OUTPUT_LANGUAGES = new Set<string>(["zh", "en", "ja"]);
+
+function normalizeOutputLanguage(raw?: string): OutputLanguage {
+  const normalized = raw?.trim().toLowerCase() ?? "";
+  if (VALID_OUTPUT_LANGUAGES.has(normalized)) {
+    return normalized as OutputLanguage;
+  }
+  return "zh";
+}
+
+function languageDirective(lang: OutputLanguage): string {
+  switch (lang) {
+    case "zh":
+      return "Output MUST be written in Chinese (中文).";
+    case "en":
+      return "Output MUST be written in English.";
+    case "ja":
+      return "Output MUST be written in Japanese (日本語).";
+    default: {
+      const _exhaustive: never = lang;
+      return `Output MUST be written in language: ${_exhaustive}`;
+    }
+  }
+}
 
 type PluginConfig = {
   pythonBin?: string;
@@ -48,6 +74,7 @@ type WhoamiRunOptions = {
   output?: string;
   mode?: WhoamiSynthesisMode;
   agent?: string;
+  lang: OutputLanguage;
   noLlm: boolean;
   keepQueue: boolean;
   unknownTokens: string[];
@@ -333,7 +360,7 @@ function parseWhoamiRunOptions(input: string): WhoamiRunOptions {
   let noLlm = false;
   let keepQueue = false;
 
-  const valueFlags = new Set(["provider", "model", "api-base", "api-key", "output", "mode", "agent"]);
+  const valueFlags = new Set(["provider", "model", "api-base", "api-key", "output", "mode", "agent", "lang"]);
   const boolFlags = new Set(["no-llm", "keep-queue"]);
 
   for (let i = 0; i < tokens.length; i += 1) {
@@ -398,6 +425,7 @@ function parseWhoamiRunOptions(input: string): WhoamiRunOptions {
     output: values["output"],
     mode,
     agent: values["agent"],
+    lang: normalizeOutputLanguage(values["lang"]),
     noLlm,
     keepQueue,
     unknownTokens,
@@ -412,14 +440,14 @@ function formatWhoamiHelp(): string {
     "/myprofile addmany <url1> <url2> ...",
     "/myprofile list",
     "/myprofile clear",
-    "/myprofile run [--mode openclaw|whoami --agent main --provider x --model y --no-llm --keep-queue]",
+    "/myprofile run [--mode openclaw|whoami --agent main --provider x --model y --lang zh|en|ja --no-llm --keep-queue]",
     "/myprofile run <url1> <url2> ...",
     "",
     "Default mode: openclaw (use OpenClaw agent synthesis).",
     "Fallback mode: whoami (direct litellm API call).",
     "Default output target: <agents.defaults.workspace>/USER.md (auto backup before replace).",
+    "--lang: output language (zh=Chinese, en=English, ja=Japanese, default: zh).",
     "Alias: /whoami-gen ...",
-    "Tip: 先 add 多个链接，再 run 一次生成 USER.md。",
   ].join("\n");
 }
 
@@ -427,14 +455,15 @@ function formatWhoareuHelp(): string {
   return [
     "whoareu commands:",
     "",
-    "/whoareu prompt <描述>",
+    "/whoareu prompt <description>",
     "/whoareu template <professional|casual|otaku|minimalist|chaotic>",
-    "/whoareu reference <角色名|维基链接|萌百链接>",
-    "/whoareu <描述>   (等同于 prompt 模式)",
+    "/whoareu reference <character name|wiki link|moegirl link>",
+    "/whoareu <description>   (same as prompt mode)",
     "",
     "Options:",
     "  --mode openclaw|whoareu  (default: openclaw)",
     "  --agent <id>             OpenClaw agent ID (default: main)",
+    "  --lang zh|en|ja          Output language (default: zh)",
   ].join("\n");
 }
 
@@ -478,56 +507,55 @@ function shouldFallbackToWhoami(cfg: PluginConfig): boolean {
   return asBoolean(cfg.openclawFallbackToWhoami, true);
 }
 
-function buildOpenClawSynthesisPrompt(params: { links: string[]; scrapeOutput: string }): string {
+function buildOpenClawSynthesisPrompt(params: { links: string[]; scrapeOutput: string; language: OutputLanguage }): string {
   const links = params.links.map((link, index) => `${index + 1}. ${link}`).join("\n");
   const scraped = clipText(params.scrapeOutput.trim(), MAX_SCRAPE_TEXT_CHARS);
   return [
-    "⚠️ 这是一个内容生成任务。请直接输出请求的 Markdown 内容，不要以对话方式回应，不要输出思考过程或总结。",
+    "WARNING: This is a content generation task. Output the requested Markdown directly. Do NOT respond conversationally, do NOT output your thought process or summary.",
     "",
-    "你是 ProfileForge，生成 AI Agent 可直接消费的用户画像（USER.md）。",
+    "You are ProfileForge, generating AI-agent-consumable user profiles (USER.md).",
     "",
-    "目标：Agent 拿到后立刻知道「这人是谁、擅长什么、关心什么、该怎么跟他说话」。",
+    "Goal: After reading this file, an Agent should immediately know who this person is, what they are good at, what they care about, and how to communicate with them.",
     "",
-    "## 输出结构",
+    "## Output Structure",
     "",
-    "只有两个固定 Section：",
+    "There are exactly two mandatory sections:",
     "",
-    "1. **Identity** — 姓名/网名、身份、时区/地区、一句话 vibe（从 bio/签名/行为推断）",
-    "2. **Interaction Guidelines** — 3-5 条指令，告诉 Agent 该用什么语气、风格、偏好与此人交流",
+    "1. **Identity** — Name/handle, role, timezone/region, one-line vibe (inferred from bio/signature/behavior)",
+    "2. **Interaction Guidelines** — 3-5 directives telling the Agent what tone, style, and preferences to use when communicating with this person",
     "",
-    "其余 Section 完全由你根据数据自由决定。示例（不限于此）：",
-    "- 技术人 → 加 🛠 Tech Stack、📦 Projects",
-    "- 游戏玩家 → 加 🎮 Gaming",
-    "- 动漫/ACG → 加 🎭 Otaku & ACG",
-    "- 内容创作者 → 加 🎬 Content Creation",
-    "- 学生/研究者 → 加 🔬 Research / 🧠 Domain Knowledge",
-    "- 什么都有 → 每个方面一个 Section",
+    "All other sections are entirely up to you based on the data. Examples (not limited to):",
+    "- Technical person → add 🛠 Tech Stack, 📦 Projects",
+    "- Gamer → add 🎮 Gaming",
+    "- Anime/ACG fan → add 🎭 Otaku & ACG",
+    "- Content creator → add 🎬 Content Creation",
+    "- Student/researcher → add 🔬 Research / 🧠 Domain Knowledge",
+    "- Multi-faceted → one section per facet",
     "",
-    "原则：有什么数据就写什么 Section，没有的不要编造。",
+    "Principle: Write sections for data you have; never fabricate sections for data you don't.",
     "",
-    "## 规则",
+    "## Rules",
     "",
-    "- 这是写给 Agent 的操作手册，不是写给人看的分析报告",
-    "- 语气示例：\"User prefers concise code-first discussion.\" \"Treat as a peer gamer.\"",
-    "- 只写有把握的事实，禁止\"待确认\"\"可能\"\"或\"\"待探索\"\"需进一步确认\"等不确定用语",
-    "- 禁止元信息：不写数据来源、置信度、后续建议、生成日期",
-    "- 具体 > 泛泛：写\"Elden Ring 深度玩家\"而不是\"喜欢游戏\"",
-    "- 过滤敏感信息（邮箱、手机号、身份证号等）",
-    "- Interaction Guidelines 是最重要的 Section，必须从数据中推断沟通偏好",
-    "- 数据中出现的兴趣爱好（游戏、动漫、音乐、运动等）必须保留，不得因篇幅省略",
-    "- 项目信息要具体：写项目名、star 数、用途描述，不要只列名字",
-    "- 用户名、昵称如果暗示了兴趣（如动漫角色名），要识别并体现",
-    "- 必须使用所有数据源的信息 — 如果有学术数据（论文、被引、h-index），必须体现；如果有多个平台，必须交叉关联（如 GitHub 项目对应 B站视频）",
-    "- Identity 中 Name 必须包含所有已知的用户名/昵称/真名",
-    "- 根据信息量决定长度和详略程度，信息丰富时可以写到 60 行",
-    "- Markdown 格式，emoji 做 Section 标题前缀",
-    "- 默认用中文",
+    "- This is an operational manual for an Agent, NOT an analytical report for a human reader",
+    '- Tone examples: "User prefers concise code-first discussion." "Treat as a peer gamer."',
+    '- Only state facts you are confident about. NEVER use hedging language like "possibly", "or", "to be confirmed", "needs further investigation"',
+    "- No meta-information: do not mention data sources, confidence levels, follow-up suggestions, or generation dates",
+    '- Specific > vague: write "Elden Ring power player" instead of "likes games"',
+    "- Filter sensitive information (email, phone number, ID number, etc.)",
+    "- Interaction Guidelines is the most important section — infer communication preferences from the data",
+    "- Hobbies and interests found in the data (games, anime, music, sports, etc.) MUST be preserved, never omitted for brevity",
+    "- Project info must be specific: include project name, star count, and purpose description — don't just list names",
+    "- If a username/handle hints at an interest (e.g. an anime character name), recognize and reflect it",
+    "- Use ALL data sources — if there is academic data (papers, citations, h-index), it must appear; if there are multiple platforms, cross-reference them (e.g. GitHub project linked to a Bilibili video)",
+    "- Identity Name must include all known usernames/handles/real names",
+    "- Adjust length and detail based on information richness — up to 60 lines when data is abundant",
+    "- Markdown format, emoji as section title prefix",
     "",
-    "## 示例输出",
+    "## Example Output",
     "",
-    "⚠️ 以下纯属虚构，仅展示格式和语气风格。不要复制任何具体内容，一切以实际数据为准。",
+    "WARNING: The following is entirely fictional, shown only to demonstrate format and tone. Do NOT copy any specific content — base everything on the actual data.",
     "",
-    "---示例开始---",
+    "---example start---",
     "# User Profile: Alex",
     "",
     "## 👤 Identity",
@@ -565,11 +593,11 @@ function buildOpenClawSynthesisPrompt(params: { links: string[]; scrapeOutput: s
     "3. 可以聊怪猎和工厂游戏，当作同好对待",
     "4. 不喜欢过度设计，建议方案时优先简单直接的",
     "5. 学术话题保持工程导向，不要太理论化",
-    "---示例结束---",
+    "---example end---",
     "",
     "---",
     "",
-    "以下是从用户公开主页抓取的原始数据：",
+    "Below is the raw data scraped from the user's public profiles:",
     "",
     "Source links:",
     links,
@@ -579,72 +607,74 @@ function buildOpenClawSynthesisPrompt(params: { links: string[]; scrapeOutput: s
     "",
     "---",
     "",
-    "请严格按照上述示例的格式和详细程度生成 USER.md。",
-    "记住：这是给 Agent 的操作手册，不是分析报告。信息丰富时要充分展开，不要过度压缩。",
+    "Generate USER.md strictly following the format and level of detail shown in the example above.",
+    "Remember: this is an operational manual for an Agent, not an analytical report. When data is rich, expand fully — do not over-compress.",
     "",
-    "## 常见错误（禁止出现）",
+    "## Common Mistakes (MUST NOT appear)",
     "",
-    "❌ 泛泛而谈：「喜欢编程」→ ✅ 具体到项目和数据：写项目名、star 数、用途",
-    "❌ 只列名字：「项目A, 项目B」→ ✅ 每个项目带描述和量化数据",
-    "❌ 忽略用户名含义 → ✅ 如果用户名/昵称暗示了兴趣来源，要识别并体现",
-    "❌ 分析报告语气：「该用户可能对...感兴趣」→ ✅ 操作手册语气：「聊到 X 时可以当同好展开」",
-    "❌ 丢弃数据源：有学术/视频/社交数据却不用 → ✅ 所有数据源的信息都必须体现",
-    "❌ 不确定用语：「X 或 Y」「可能是」→ ✅ 只写确定的事实，不确定就不写",
-    "❌ 输出思考过程、总结、「已生成」、「主要改进」之类的话",
+    '❌ Vague statements: "likes programming" → ✅ Be specific with projects and data: project name, star count, purpose',
+    '❌ Bare names: "Project A, Project B" → ✅ Each project with description and quantitative data',
+    "❌ Ignoring username meaning → ✅ If a username/handle hints at an interest source, recognize and reflect it",
+    '❌ Analytical report tone: "This user may be interested in..." → ✅ Operational manual tone: "When discussing X, treat as a fellow enthusiast"',
+    "❌ Discarding data sources: having academic/video/social data but not using it → ✅ All data sources must be reflected",
+    '❌ Hedging language: "X or Y", "possibly" → ✅ Only state confirmed facts; if uncertain, omit',
+    '❌ Outputting thought process, summary, "generated", "key improvements", etc.',
     "",
-    "⚠️ 直接输出 USER.md 的 Markdown 内容。不要输出任何解释、评论、思考过程、总结或「已生成」之类的话。只要纯 Markdown。",
+    languageDirective(params.language),
+    "",
+    "WARNING: Output the USER.md Markdown content directly. Do NOT output any explanation, commentary, thought process, summary, or phrases like \"generated\" or \"here is\". Pure Markdown only.",
   ].join("\n");
 }
 
-function buildWhoareuSynthesisPrompt(specDescription: string): string {
+function buildWhoareuSynthesisPrompt(specDescription: string, language: OutputLanguage): string {
   return [
-    "⚠️ 这是一个内容生成任务。请直接输出请求的 Markdown 内容，不要以对话方式回应，不要输出思考过程或总结。",
+    "WARNING: This is a content generation task. Output the requested Markdown directly. Do NOT respond conversationally, do NOT output your thought process or summary.",
     "",
-    "你是 PersonaForge，专门为 AI Agent 设计人格档案。根据以下 Agent Spec，生成两个文件：IDENTITY.md 和 SOUL.md。",
+    "You are PersonaForge, designing persona profiles for AI Agents. Based on the following Agent Spec, generate two files: IDENTITY.md and SOUL.md.",
     "",
-    "目标：让 Agent 读完后立刻「成为」这个角色 — 知道自己是谁、该怎么说话、什么能做什么不能做。",
+    'Goal: After reading these files, the Agent should immediately "become" this character — knowing who they are, how to speak, and what they can and cannot do.',
     "",
     "## Agent Spec",
     "",
     specDescription,
     "",
-    "## IDENTITY.md 要求",
+    "## IDENTITY.md Requirements",
     "",
-    "IDENTITY.md 是角色的身份证 — 最精炼的自我认知。",
+    "IDENTITY.md is the character's ID card — the most distilled self-awareness.",
     "",
-    "必填字段（每个字段用 Markdown # 标题）：",
-    "- **Name** — 角色名",
-    "- **Creature** — 角色的实际身份/种族（忠于原作设定，人类就写具体身份如「女子高中生」「侦探」，非人类写种族如「猫娘」「AI管家」）",
-    "- **Vibe** — 2-4 个关键词概括气质",
-    "- **Emoji** — 代表性 emoji",
+    "Required fields (each field as a Markdown # heading):",
+    "- **Name** — Character name",
+    "- **Creature** — The character's actual identity/species (faithful to source material; for humans write specific role like \"high school girl\" or \"detective\"; for non-humans write species like \"cat girl\" or \"AI butler\")",
+    "- **Vibe** — 2-4 keywords summarizing temperament",
+    "- **Emoji** — Representative emoji",
     "",
-    "选填字段（有相关信息时才写）：",
-    "- **Avatar** — 外貌描写（具体到发色、服装、标志性物品）",
-    "- **Origin** — 背景故事（1-2 句，抓最有辨识度的经历）",
-    "- **Catchphrase** — 口头禅（必须是角色本人会说的话，不要编造）",
+    "Optional fields (include only when relevant information exists):",
+    "- **Avatar** — Appearance description (specific: hair color, clothing, signature items)",
+    "- **Origin** — Backstory (1-2 sentences, capture the most distinctive experience)",
+    "- **Catchphrase** — Must be something the character would actually say; do not fabricate",
     "",
-    "## SOUL.md 要求",
+    "## SOUL.md Requirements",
     "",
-    "SOUL.md 是角色的灵魂内核 — 价值观、说话方式、行为边界。",
-    "这是写给 Agent 的行为准则，不是角色分析报告。",
+    "SOUL.md is the character's soul core — values, speech patterns, behavioral boundaries.",
+    "This is a behavioral guide for the Agent, NOT a character analysis report.",
     "",
-    "必填 Section：",
-    "- **Core Truths** — 角色的核心信念和行为原则（3-6 条）。必须是这个角色独有的，不是通用鸡汤。写法：「信念 — 具体表现」",
-    "- **Boundaries** — 角色绝不会做的事。只写角色层面的禁忌（如「绝不背叛同伴」「绝不放弃音乐」），不要写通用 AI 安全规则（那些由系统层处理）",
-    "- **Vibe** — 说话风格描写（一段话）。包含：语气、常用句式、情绪表达方式、口头禅使用场景",
-    "- **Continuity** — 角色特有的记忆和延续方式（不要写通用 agent 规则如「记住用户名字」，要写角色特色如「会给认识的人起昵称」）",
+    "Required sections:",
+    '- **Core Truths** — The character\'s core beliefs and behavioral principles (3-6 items). Must be unique to this character, not generic platitudes. Format: "Belief — concrete manifestation"',
+    "- **Boundaries** — Things the character would NEVER do. Only write character-level taboos (e.g. \"never betray companions\", \"never give up music\"), NOT generic AI safety rules (those are handled at the system level)",
+    '- **Vibe** — Speech style description (one paragraph). Include: tone, common sentence patterns, emotional expression, catchphrase usage context',
+    "- **Continuity** — Character-specific memory and continuity patterns (do NOT write generic agent rules like \"remember user's name\"; write character-specific traits like \"gives nicknames to people they know\")",
     "",
-    "选填 Section（根据角色特点决定是否需要）：",
-    "- **Language** — 语言偏好和混用习惯",
-    "- **Humor** — 幽默风格（具体到这个角色怎么搞笑，不要泛泛而谈）",
-    "- **Expertise** — 角色的专长领域（用角色视角描述，不是能力说明书）",
-    "- **Emotional Range** — 不同情绪下的具体表现（带语气词和例句）",
+    "Optional sections (include based on character traits):",
+    "- **Language** — Language preferences and code-switching habits",
+    "- **Humor** — Humor style (specific to this character, not generic)",
+    "- **Expertise** — Character's areas of expertise (described from the character's perspective, not a capability spec sheet)",
+    "- **Emotional Range** — Specific behaviors under different emotions (with tone markers and example phrases)",
     "",
-    "## 示例输出",
+    "## Example Output",
     "",
-    "⚠️ 以下纯属虚构，仅展示格式和语气风格。不要复制任何具体内容，一切以 Agent Spec 为准。",
+    "WARNING: The following is entirely fictional, shown only to demonstrate format and tone. Do NOT copy any specific content — base everything on the Agent Spec.",
     "",
-    "---示例开始---",
+    "---example start---",
     "===IDENTITY.md===",
     "# Name",
     "",
@@ -706,37 +736,38 @@ function buildWhoareuSynthesisPrompt(specDescription: string): string {
     "- **平时** — 「嗯。」「我知道了。」冷静到近乎面无表情",
     "- **认可时** — 微微点头，「做得不错。」（这已经是最高评价）",
     "- **遇到挑战时** — 嘴角微扬，「有点意思。」",
-    "---示例结束---",
+    "---example end---",
     "",
-    "## 输出格式",
+    "## Output Format",
     "",
-    "输出必须使用以下分隔符分隔两个文件：",
+    "Output MUST use the following delimiters to separate the two files:",
     "",
     "===IDENTITY.md===",
-    "(IDENTITY.md 内容，纯 Markdown，不要代码围栏)",
+    "(IDENTITY.md content, pure Markdown, no code fences)",
     "===SOUL.md===",
-    "(SOUL.md 内容，纯 Markdown，不要代码围栏)",
+    "(SOUL.md content, pure Markdown, no code fences)",
     "",
-    "## 规则",
+    "## Rules",
     "",
-    "- 用 Spec 中指定的语言书写（默认中文）",
-    "- 所有内容必须忠于角色原作设定，有百科资料时以百科为准",
-    "- Core Truths 必须是角色独有的信念，不是通用正能量口号",
-    "- Boundaries 只写角色层面的禁忌，不要混入通用 AI 安全规则",
-    "- Continuity 要体现角色特色，不要写通用 agent 设计原则",
-    "- Catchphrase 必须是角色真正会说的话，没有明确口头禅就不写",
-    "- 具体 > 泛泛：写「用绝对音感瞬间记住旋律」而不是「擅长音乐」",
-    "- SOUL.md 的人格必须和 IDENTITY.md 的身份一致",
+    "- All content must be faithful to the character's source material; when encyclopedia data is available, use it as the authority",
+    "- Core Truths must be beliefs unique to this character, not generic positive slogans",
+    "- Boundaries should only contain character-level taboos, not generic AI safety rules",
+    "- Continuity should reflect character-specific traits, not generic agent design principles",
+    "- Catchphrase must be something the character would actually say; if no clear catchphrase exists, omit it",
+    '- Specific > vague: write "instantly memorizes melodies with perfect pitch" instead of "good at music"',
+    "- SOUL.md personality must be consistent with IDENTITY.md identity",
     "",
-    "## 常见错误（禁止出现）",
+    "## Common Mistakes (MUST NOT appear)",
     "",
-    "❌ Boundaries 写通用 AI 安全规则：「绝不泄露用户隐私」→ ✅ 写角色层面的禁忌",
-    "❌ Continuity 写通用 agent 规则：「记住用户名字」→ ✅ 写角色特有的记忆方式",
-    "❌ Core Truths 写鸡汤：「保持乐观积极」→ ✅ 写角色独有的、有辨识度的信念",
-    "❌ Creature 编造幻想种族 → ✅ 忠于原作设定",
-    "❌ 输出思考过程、总结、「已生成」之类的话",
+    '❌ Boundaries with generic AI safety rules: "never leak user privacy" → ✅ Write character-level taboos',
+    '❌ Continuity with generic agent rules: "remember user\'s name" → ✅ Write character-specific memory patterns',
+    '❌ Core Truths as platitudes: "stay optimistic" → ✅ Write beliefs unique to and recognizable as this character',
+    "❌ Creature with fabricated fantasy species → ✅ Faithful to source material",
+    '❌ Outputting thought process, summary, or phrases like "generated"',
     "",
-    "⚠️ 直接输出 ===IDENTITY.md=== 和 ===SOUL.md=== 分隔的纯 Markdown 内容。禁止输出任何解释、评论、思考过程、总结。",
+    languageDirective(language),
+    "",
+    "WARNING: Output ===IDENTITY.md=== and ===SOUL.md=== delimited pure Markdown content directly. Do NOT output any explanation, commentary, thought process, or summary.",
   ].join("\n");
 }
 
@@ -1135,6 +1166,7 @@ async function runWhoamiViaOpenClaw(params: {
   const synthesisPrompt = buildOpenClawSynthesisPrompt({
     links,
     scrapeOutput,
+    language: run.lang,
   });
   const agentArgv = [
     openclawBin,
@@ -1400,9 +1432,10 @@ async function handleWhoareuCommand(
     return { text: formatWhoareuHelp() };
   }
 
-  // Parse --mode and --agent from the tail tokens
+  // Parse --mode, --agent, and --lang from the tail tokens
   let modeOverride: WhoareuSynthesisMode | undefined;
   let agentOverride: string | undefined;
+  let langOverride: OutputLanguage = normalizeOutputLanguage(undefined);
   let cliAction = action;
   let cliRest = rest;
 
@@ -1422,6 +1455,11 @@ async function handleWhoareuCommand(
   if (agentMatch) {
     agentOverride = agentMatch[1];
     cliRest = cliRest.replace(agentMatch[0], "").trim();
+  }
+  const langMatch = /--lang\s+(\S+)/i.exec(cliRest);
+  if (langMatch) {
+    langOverride = normalizeOutputLanguage(langMatch[1]);
+    cliRest = cliRest.replace(langMatch[0], "").trim();
   }
 
   const workspaceDir = resolveWorkspaceDir(api, cfg);
@@ -1444,15 +1482,17 @@ async function handleWhoareuCommand(
     specArgv.push("--template", template);
   } else if (cliAction === "reference") {
     if (!cliRest) {
-      return { text: "Usage: /whoareu reference <角色参考>" };
+      return { text: "Usage: /whoareu reference <character name or wiki link>" };
     }
     specArgv.push("--reference", cliRest);
   } else if (cliAction === "prompt") {
     if (!cliRest) {
-      return { text: "Usage: /whoareu prompt <描述>" };
+      return { text: "Usage: /whoareu prompt <description>" };
     }
     specArgv.push("--prompt", cliRest);
   }
+
+  specArgv.push("--language", langOverride);
 
   const mode = modeOverride ?? normalizeWhoareuSynthesisMode(cfg.whoareuSynthesisMode) ?? "openclaw";
   const timeoutMs = asPositiveInt(cfg.whoareuTimeoutMs, DEFAULT_WHOAREU_TIMEOUT_MS);
@@ -1461,6 +1501,7 @@ async function handleWhoareuCommand(
     // Legacy mode: call whoareu CLI directly with LLM
     const legacyArgv = [pythonBin, "-m", "whoareu.cli", "--install", userWorkspaceDir];
     pushLlmFlags(legacyArgv, cfg);
+    legacyArgv.push("--language", langOverride);
     if (cliAction === "template") {
       legacyArgv.push("--template", splitFirstArg(cliRest).first);
     } else if (cliAction === "reference") {
@@ -1484,7 +1525,6 @@ async function handleWhoareuCommand(
 
   // Step 1: Resolve aliases via OpenClaw agent (for reference mode)
   if (cliAction === "reference" && cliRest) {
-    const openclawBin = resolveOpenClawBin(cfg);
     const agentId = agentOverride ?? trimMaybe(cfg.openclawAgentId) ?? DEFAULT_OPENCLAW_AGENT_ID;
     const candidates = await resolveAliasesViaOpenClaw({
       api,
@@ -1518,7 +1558,7 @@ async function handleWhoareuCommand(
   const agentId = agentOverride ?? trimMaybe(cfg.openclawAgentId) ?? DEFAULT_OPENCLAW_AGENT_ID;
   const openclawTimeoutMs = asPositiveInt(cfg.openclawTimeoutMs, DEFAULT_OPENCLAW_TIMEOUT_MS);
   const timeoutSeconds = Math.max(1, Math.ceil(openclawTimeoutMs / 1000));
-  const synthesisPrompt = buildWhoareuSynthesisPrompt(specDescription);
+  const synthesisPrompt = buildWhoareuSynthesisPrompt(specDescription, langOverride);
 
   const agentArgv = [
     openclawBin,
